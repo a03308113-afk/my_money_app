@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>我的資產表 (V17 歷史預載)</title>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    <style>
+        /* --- 風格設定 --- */
+        :root {
+            --bg-color: #F7F7F7;
+            --card-bg: #FFFFFF;
+            --text-main: #4A4A4A;
+            --text-sub: #9B9B9B;
+            --accent-color: #7D8668;   /* 抹茶綠 */
+            --danger-color: #B85C5C;   /* 豆沙紅 */
+            --search-btn: #4A90E2;     /* 查價藍 */
+            --excel-btn: #217346;      /* Excel 綠 */
+            --backup-btn: #607D8B;     /* 備份灰 */
+            --info-bg: #E3E8E3;
+            --border-color: #E0E0E0;
+            --calc-bg: #F0F4F0;
+        }
+
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: var(--bg-color); color: var(--text-main); margin: 0; padding: 0; padding-bottom: 120px; }
+        .page { display: none; padding: 20px; max-width: 600px; margin: 0 auto; }
+        .page.active { display: block; animation: fadeIn 0.3s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+        .header { text-align: center; font-weight: bold; font-size: 1.1rem; margin-bottom: 15px; padding-top: 10px; color: var(--text-main); }
+        .card { background-color: var(--card-bg); padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); margin-bottom: 20px; }
+
+        .date-picker-container { background: #FFF; padding: 10px 15px; border-radius: 10px; margin-bottom: 15px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border: 1px solid var(--accent-color); }
+        .date-input { border: none; background: transparent; font-size: 1rem; color: var(--text-main); font-family: inherit; font-weight: bold; cursor: pointer; }
+        
+        .big-number { font-size: 2.2rem; font-weight: 700; margin: 10px 0; text-align: center; }
+        .sub-number { font-size: 0.9rem; text-align: center; margin-bottom: 10px; font-weight: bold; }
+
+        /* V16 分析條樣式 */
+        .analysis-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px dashed #EEE; }
+        .analysis-row:last-child { border-bottom: none; }
+        .analysis-label { font-size: 0.95rem; font-weight: 500; color: #555; display: flex; align-items: center; }
+        .analysis-val { font-weight: bold; font-size: 1rem; }
+        .trend-icon { margin-right: 8px; font-size: 1.1rem; width: 25px; text-align: center; display: inline-block;}
+
+        .toggle-container { display: flex; justify-content: center; align-items: center; margin-bottom: 10px; font-size: 0.9rem; color: var(--text-sub); }
+        .toggle-label { cursor: pointer; padding: 5px; }
+        .switch { position: relative; display: inline-block; width: 40px; height: 20px; margin: 0 10px;}
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #CCC; transition: .4s; border-radius: 20px; }
+        .slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 2px; bottom: 2px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background-color: var(--accent-color); }
+        input:checked + .slider:before { transform: translateX(20px); }
+
+        .card-category .detail-list { display: none; margin-top: 10px; border-top: 1px dashed #EEE; padding-top: 10px; }
+        .card-category.show-details .detail-list { display: block !important; animation: slideDown 0.3s ease; }
+        @keyframes slideDown { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+        .detail-item { display: flex; justify-content: space-between; font-size: 0.85rem; color: #888; margin-bottom: 6px; padding-left: 10px; }
+
+        .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-weight: bold; color: var(--text-main); }
+        .dynamic-row { display: flex; align-items: center; margin-bottom: 8px; }
+        .dynamic-name { flex: 1; padding: 10px; border: 1px solid var(--border-color); border-radius: 8px 0 0 8px; background: #FAFAFA; font-size: 0.95rem; }
+        .dynamic-val { width: 110px; padding: 10px; border: 1px solid var(--border-color); border-radius: 0 8px 8px 0; text-align: right; font-size: 1rem; }
+        
+        .stock-row { background-color: var(--calc-bg); border-radius: 10px; padding: 10px; margin-bottom: 12px; border: 1px solid #E0E6E0; }
+        .stock-name-row { display: flex; align-items: center; margin-bottom: 5px; }
+        .stock-name-input { width: 100%; border: none; background: transparent; font-weight: bold; font-size: 0.95rem; color: var(--text-main); border-bottom: 1px dashed #CCC; padding-bottom: 3px; }
+        .btn-search { background: var(--search-btn); color: white; border: none; border-radius: 4px; padding: 4px 8px; font-size: 0.75rem; margin-right: 8px; cursor: pointer; white-space: nowrap; display: flex; align-items: center; }
+        .stock-calc-row { display: flex; justify-content: space-between; align-items: center; gap: 5px; }
+        .calc-group { display: flex; flex-direction: column; width: 30%; }
+        .calc-label { font-size: 0.7rem; color: #888; margin-bottom: 2px; }
+        .calc-input { width: 100%; padding: 5px; border: 1px solid #DDD; border-radius: 6px; text-align: center; font-size: 0.9rem; box-sizing: border-box; }
+        .stock-total-row { display: flex; justify-content: space-between; align-items: center; margin-top: 5px; padding-top: 5px; border-top: 1px solid rgba(0,0,0,0.05); }
+
+        .btn-del { margin-left: 8px; color: #CCC; font-size: 1.2rem; cursor: pointer; padding: 5px; }
+        .btn-add { width: 100%; padding: 10px; border: 1px dashed #CCC; color: #888; background: transparent; border-radius: 8px; cursor: pointer; margin-top: 5px; font-size: 0.9rem; }
+        .btn-save { display: block; width: 100%; padding: 15px; background-color: var(--accent-color); color: white; border: none; border-radius: 12px; font-size: 1rem; font-weight: bold; cursor: pointer; margin-top: 20px; }
+        .memo-input { width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 1rem; background: #FFF; margin-bottom: 15px; min-height: 80px; resize: vertical; }
+        .info-board { background-color: var(--info-bg); padding: 15px; border-radius: 12px; margin-bottom: 20px; color: #556B55; font-size: 0.9rem; position: relative; }
+        .info-memo { font-weight: bold; line-height: 1.5; white-space: pre-wrap; }
+
+        .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; height: 60px; background: #FFF; display: flex; justify-content: space-around; align-items: center; border-top: 1px solid #EEE; z-index: 100; }
+        .nav-item { flex: 1; text-align: center; color: #C0C0C0; cursor: pointer; display: flex; flex-direction: column; justify-content: center; height: 100%; }
+        .nav-item.active { color: var(--accent-color); }
+        .nav-icon { font-size: 1.4rem; margin-bottom: 2px; }
+
+        .chart-container { display: flex; align-items: center; justify-content: space-between; height: 250px; padding-top: 20px; border-bottom: 1px solid #EEE; position: relative; }
+        .zero-line { position: absolute; left: 0; right: 0; top: 50%; border-top: 1px dashed #CCC; z-index: 0; }
+        .bar-wrapper { width: 15%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; position: relative; z-index: 1; }
+        .bar { width: 100%; transition: height 0.5s ease; opacity: 0.9; }
+        .bar.positive { background: var(--accent-color); border-radius: 4px 4px 0 0; }
+        .bar.negative { background: var(--danger-color); border-radius: 0 0 4px 4px; }
+        .bar-label { position: absolute; bottom: -25px; font-size: 0.75rem; color: #999; }
+        .bar-val-text { position: absolute; font-size: 0.7rem; font-weight: bold; width: 120%; text-align: center; color: #666; }
+
+        .backup-section { text-align: center; margin-top: 30px; border-top: 1px solid #EEE; padding-top: 20px; display: flex; flex-direction: column; gap: 15px; align-items: center; }
+        .backup-btn-group { display: flex; gap: 10px; width: 90%; justify-content: center; }
+        .btn-action { padding: 12px 20px; border-radius: 12px; font-size: 0.9rem; cursor: pointer; border: none; color: white; display: inline-flex; align-items: center; justify-content: center; font-weight: bold; flex: 1; }
+        .btn-excel { background-color: var(--excel-btn); box-shadow: 0 4px 8px rgba(33, 115, 70, 0.2); }
+        .btn-backup { background-color: var(--backup-btn); color: white;}
+        .btn-import { background-color: #FFF; border: 1px solid var(--backup-btn); color: var(--backup-btn); }
+        .section-label { font-size: 0.85rem; color: #999; margin-bottom: 5px; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <div id="page-home" class="page active">
+        <div class="header">資產戰情室</div>
+        <div class="date-picker-container" style="background-color: var(--info-bg); border: none;">
+            <span style="font-size: 0.9rem; color: #556B55;">📅 月份：</span>
+            <input type="month" id="home-date-picker" class="date-input" onchange="loadHomeDataByDate(this.value)">
+        </div>
+        
+        <div class="card">
+            <div style="font-size:0.9rem; color:var(--text-sub); text-align:center;">淨資產總額</div>
+            <div class="big-number" id="dash-net-worth">...</div>
+            <div class="sub-number" id="dash-diff"></div>
+        </div>
+
+        <div class="card">
+            <h3 style="font-size:1rem; margin:0 0 15px 0; color:var(--text-main);">📊 較上月變動分析</h3>
+            <div id="analysis-container">
+                <div style="text-align:center;color:#999;font-size:0.9rem;">(尚無上個月資料可供比較)</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="toggle-container">
+                <span class="toggle-label" onclick="setMode(false)">隱藏細項</span>
+                <label class="switch"><input type="checkbox" id="detailToggle" onchange="toggleDetails()"><span class="slider"></span></label>
+                <span class="toggle-label" onclick="setMode(true)">顯示全貌</span>
+            </div>
+        </div>
+        
+        <div id="cards-container"></div>
+
+        <div class="backup-section">
+            <div style="width:100%">
+                <div class="section-label">📊 數據分析</div>
+                <div class="backup-btn-group">
+                    <button class="btn-action btn-excel" onclick="exportHistoryExcel()">匯出完整歷史 Excel</button>
+                </div>
+            </div>
+
+            <div style="width:100%">
+                <div class="section-label">⚙️ 資料同步</div>
+                <div class="backup-btn-group">
+                    <button class="btn-action btn-backup" onclick="exportData()">備份檔案</button>
+                    <button class="btn-action btn-import" onclick="document.getElementById('importFile').click()">匯入檔案</button>
+                    <input type="file" id="importFile" style="display:none" onchange="importData(this)">
+                </div>
+            </div>
+        </div>
+        <div style="height: 30px;"></div>
+    </div>
+
+    <div id="page-input" class="page">
+        <div class="header">資產盤點</div>
+        <div class="date-picker-container">
+            <span style="font-size: 0.9rem; color: var(--accent-color);">📅 記帳月份：</span>
+            <input type="month" id="input-date-picker" class="date-input" onchange="loadInputDataByDate(this.value)">
+        </div>
+        
+        <div style="margin-bottom: 20px;"><textarea id="input-memo" class="memo-input" placeholder="本月重要筆記..."></textarea></div>
+
+        <div id="section-assets"><div id="input-sections-assets"></div></div>
+
+        <button class="btn-save" onclick="saveData()">儲存紀錄</button>
+        <div style="height:30px"></div>
+    </div>
+
+    <div id="page-trend" class="page">
+        <div class="header">淨資產成長</div>
+        <div class="card"><div class="chart-container" id="css-chart"></div></div>
+    </div>
+
+    <div class="bottom-nav">
+        <div class="nav-item active" onclick="switchPage('home')"><span class="nav-icon">☖</span><span>首頁</span></div>
+        <div class="nav-item" onclick="switchPage('input')"><span class="nav-icon">✎</span><span>記帳</span></div>
+        <div class="nav-item" onclick="switchPage('trend')"><span class="nav-icon">📊</span><span>趨勢</span></div>
+    </div>
+
+    <script>
+        // --- V17 核心邏輯 ---
+        let dataStore = {}; 
+        const defaultTemplate = {
+            cash: [
+                {name: "國泰世華 (台幣)", val: 0}, {name: "台新銀行 (台幣)", val: 0}, {name: "郵局", val: 0},
+                {name: "第一銀行", val: 0}, {name: "台灣銀行", val: 0}, {name: "永豐銀行 (台幣)", val: 0},
+                {name: "玉山銀行", val: 0}, {name: "元大銀行 (台幣)", val: 0}, {name: "華南銀行", val: 0},
+                {name: "台新銀行 (外幣)", val: 0}, {name: "國泰世華 (外幣)", val: 0}, {name: "永豐銀行 (外幣)", val: 0}
+            ],
+            invest: [
+                {name: "VOO", val: 0, price: 0, shares: 0, exrate: 32.5}, 
+                {name: "QQQ", val: 0, price: 0, shares: 0, exrate: 32.5}, 
+                {name: "SPY", val: 0, price: 0, shares: 0, exrate: 32.5},
+                {name: "台股大盤", val: 0, price: 0, shares: 0, exrate: 1}, 
+                {name: "元大銀行 (基金)", val: 0, price: 0, shares: 0, exrate: 1}
+            ],
+            prop: [{name: "自用透天 (估值)", val: 8500000}],
+            debt: [
+                {name: "台新銀行 (信用卡)", val: 0}, {name: "元大銀行 (信用卡)", val: 0}, {name: "國泰世華 (信用卡)", val: 0},
+                {name: "房屋貸款", val: 0}, {name: "信用貸款", val: 0}, {name: "學生貸款", val: 0}
+            ],
+            memo: ""
+        };
+
+        let currentEditingDate = "";
+        let currentEditingData = null;
+
+        window.onload = function() {
+            // 優先載入 V9 資料庫，若無則初始化
+            let stored = localStorage.getItem('myAssetData_v9_db');
+            if (stored) {
+                dataStore = JSON.parse(stored);
+            } else {
+                migrateOrInitData();
+            }
+
+            // 預設開啟最近的一個月
+            let today = new Date().toISOString().substring(0, 7);
+            let targetDate = today;
+            let dates = Object.keys(dataStore).sort();
+            if (dates.length > 0) targetDate = dates[dates.length - 1]; // 預設跳到有資料的最後一個月
+
+            document.getElementById('home-date-picker').value = targetDate;
+            document.getElementById('input-date-picker').value = targetDate;
+            loadHomeDataByDate(targetDate);
+            loadInputDataByDate(targetDate);
+            renderChart();
+        };
+
+        function migrateOrInitData() {
+            // --- 2025年 11月 (淨資產 -255萬) ---
+            let d1 = JSON.parse(JSON.stringify(defaultTemplate));
+            d1.prop[0].val = 8500000; // 房產
+            d1.cash[0].val = 200000;  // 預設一點現金
+            d1.invest[0].val = 1000000; // 預設一點投資
+            d1.debt[3].val = 12250000; // 房貸+其他負債 (調整至淨值 -255萬)
+            d1.memo = "初始匯入：淨資產約 -255萬 (尚未計入部分美金)";
+            dataStore["2025-11"] = d1;
+
+            // --- 2025年 12月 (淨資產 -200萬 預估) ---
+            let d2 = JSON.parse(JSON.stringify(defaultTemplate));
+            d2.prop[0].val = 8500000;
+            d2.cash[0].val = 300000;
+            d2.invest[0].val = 1200000;
+            d2.debt[3].val = 12000000;
+            d2.memo = "系統自動推估：資產回升過渡期";
+            dataStore["2025-12"] = d2;
+
+            // --- 2026年 01月 (淨資產 -150萬) ---
+            let d3 = JSON.parse(JSON.stringify(defaultTemplate));
+            d3.prop[0].val = 8500000;
+            d3.cash[0].val = 500000; // 年終?
+            d3.invest[0].val = 1500000; // 股市上漲?
+            d3.debt[3].val = 12000000; // 負債持平
+            d3.memo = "最新匯入：淨資產回升至 -150萬";
+            dataStore["2026-01"] = d3;
+
+            localStorage.setItem('myAssetData_v9_db', JSON.stringify(dataStore));
+        }
+
+        // --- 核心功能函數 ---
+        function generateAnalysis(currentData, date) {
+            let dates = Object.keys(dataStore).sort();
+            let currIdx = dates.indexOf(date);
+            if (currIdx <= 0) return `<div style="text-align:center;color:#999;font-size:0.9rem;">(這是第一筆紀錄，無法比較)</div>`;
+
+            let prevData = dataStore[dates[currIdx - 1]];
+            let diffCash = getSum(currentData.cash) - getSum(prevData.cash);
+            let diffInvest = getSum(currentData.invest) - getSum(prevData.invest);
+            let diffProp = getSum(currentData.prop) - getSum(prevData.prop);
+            let diffDebt = getSum(currentData.debt) - getSum(prevData.debt);
+            let diffNet = (diffCash + diffInvest + diffProp) - diffDebt;
+
+            return `
+                ${renderAnalysisRow("💰 現金變動", diffCash, true)}
+                ${renderAnalysisRow("📈 投資損益", diffInvest, true)}
+                ${renderAnalysisRow("🏠 房產估值", diffProp, true)}
+                ${renderAnalysisRow("💸 負債變動", diffDebt, false)}
+                <div style="margin-top:10px; padding-top:10px; border-top:1px solid #EEE; display:flex; justify-content:space-between; align-items:center;">
+                    <span style="font-weight:bold; color:var(--text-main);">總淨值成長</span>
+                    <span style="font-weight:bold; font-size:1.1rem; color:${diffNet>=0?'var(--accent-color)':'var(--danger-color)'}">${diffNet>=0?'+':''}${diffNet.toLocaleString()}</span>
+                </div>
+            `;
+        }
+
+        function renderAnalysisRow(label, val, isAsset) {
+            let color = val > 0 ? (isAsset ? "var(--accent-color)" : "var(--danger-color)") : (val < 0 ? (isAsset ? "var(--danger-color)" : "var(--accent-color)") : "#999");
+            let icon = val > 0 ? "▲" : (val < 0 ? "▼" : "-");
+            return `<div class="analysis-row"><span class="analysis-label"><span class="trend-icon" style="color:${color}">${icon}</span> ${label}</span><span class="analysis-val" style="color:${color}">${val > 0 ? '+' : ''}${val.toLocaleString()}</span></div>`;
+        }
+
+        function exportHistoryExcel() {
+            let dates = Object.keys(dataStore).sort();
+            if (dates.length === 0) { alert("無資料"); return; }
+            let assetRows = [];
+            let allCashNames = new Set(), allInvestNames = new Set(), allPropNames = new Set(), allDebtNames = new Set();
+            dates.forEach(d => {
+                dataStore[d].cash.forEach(i => allCashNames.add(i.name));
+                dataStore[d].invest.forEach(i => allInvestNames.add(i.name));
+                dataStore[d].prop.forEach(i => allPropNames.add(i.name));
+                dataStore[d].debt.forEach(i => allDebtNames.add(i.name));
+            });
+            dates.forEach(date => {
+                let d = dataStore[date];
+                let net = (getSum(d.cash) + getSum(d.invest) + getSum(d.prop)) - getSum(d.debt);
+                let row = { "月份": date, "淨資產總額": net, "現金總額": getSum(d.cash), "投資總額": getSum(d.invest), "不動產總額": getSum(d.prop), "負債總額": getSum(d.debt) };
+                allCashNames.forEach(n => row[`現金_${n}`] = findVal(d.cash, n));
+                allInvestNames.forEach(n => row[`投資_${n}`] = findVal(d.invest, n));
+                allPropNames.forEach(n => row[`房產_${n}`] = findVal(d.prop, n));
+                allDebtNames.forEach(n => row[`負債_${n}`] = findVal(d.debt, n));
+                row["備忘錄"] = d.memo;
+                assetRows.push(row);
+            });
+            let wb = XLSX.utils.book_new();
+            let ws1 = XLSX.utils.json_to_sheet(assetRows);
+            XLSX.utils.book_append_sheet(wb, ws1, "歷史資產紀錄");
+            XLSX.writeFile(wb, "我的資產全紀錄.xlsx");
+        }
+
+        function findVal(arr, name) { let found = arr.find(i => i.name === name); return found ? found.val : 0; }
+        function getSum(arr) { return arr ? arr.reduce((a, b) => a + b.val, 0) : 0; }
+        function getTodayStr() { return new Date().toISOString().substring(0, 7); }
+
+        function exportData() {
+            let dataStr = JSON.stringify(dataStore);
+            let blob = new Blob([dataStr], {type: "application/json"});
+            let url = URL.createObjectURL(blob);
+            let a = document.createElement('a');
+            a.href = url; a.download = "money_backup_" + getTodayStr() + ".json"; a.click();
+        }
+
+        function importData(input) {
+            let file = input.files[0]; if(!file) return;
+            let reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    let imported = JSON.parse(e.target.result);
+                    if(confirm("確定匯入？")) {
+                        dataStore = {};
+                        for(let k in imported) {
+                            let newK = k.substring(0, 7);
+                            dataStore[newK] = imported[k];
+                            delete dataStore[newK].income; delete dataStore[newK].expense;
+                        }
+                        localStorage.setItem('myAssetData_v9_db', JSON.stringify(dataStore));
+                        alert("匯入成功！"); location.reload();
+                    }
+                } catch(err) { alert("格式錯誤"); }
+            };
+            reader.readAsText(file);
+        }
+
+        function loadInputDataByDate(date) {
+            currentEditingDate = date;
+            if (dataStore[date]) {
+                currentEditingData = JSON.parse(JSON.stringify(dataStore[date]));
+            } else {
+                let dates = Object.keys(dataStore).sort();
+                let lastDate = dates[dates.length - 1];
+                if(lastDate) {
+                     currentEditingData = JSON.parse(JSON.stringify(dataStore[lastDate]));
+                     currentEditingData.memo = "";
+                } else {
+                     currentEditingData = JSON.parse(JSON.stringify(defaultTemplate));
+                }
+            }
+            document.getElementById('input-memo').value = currentEditingData.memo || "";
+            renderAssetsInput();
+        }
+
+        function renderAssetsInput() {
+            const container = document.getElementById('input-sections-assets'); container.innerHTML = '';
+            ['cash', 'prop', 'debt'].forEach(type => {
+                let title = type==='cash'?'💰 現金':(type==='prop'?'🏠 不動產':'💸 負債');
+                let html = `<div class="card"><div class="section-header">${title} <span id="total-${type}-edit" style="font-size:0.9rem; color:#888;">$0</span></div><div id="list-${type}">`;
+                currentEditingData[type].forEach((item, index) => html += buildRowHtml(type, index, item));
+                html += `</div><button class="btn-add" onclick="addRow('${type}')">+ 新增項目</button></div>`;
+                container.innerHTML += html;
+            });
+            let investHtml = `<div class="card"><div class="section-header">📈 投資 <span id="total-invest-edit" style="font-size:0.9rem; color:#888;">$0</span></div><div id="list-invest">`;
+            currentEditingData.invest.forEach((item, index) => investHtml += buildStockRowHtml(index, item));
+            investHtml += `</div><button class="btn-add" onclick="addRow('invest')">+ 新增項目</button></div>`;
+            container.innerHTML += investHtml;
+            updateEditTotals();
+        }
+
+        function buildRowHtml(type, index, item) {
+            return `<div class="dynamic-row"><input type="text" class="dynamic-name" value="${item.name}" onchange="updateSimpleData('${type}', ${index}, 'name', this.value)"><input type="number" class="dynamic-val" value="${item.val}" placeholder="0" onchange="updateSimpleData('${type}', ${index}, 'val', this.value)"><div class="btn-del" onclick="delRow('${type}', ${index})">×</div></div>`;
+        }
+        function buildStockRowHtml(index, item) {
+            return `<div class="stock-row"><div class="stock-name-row"><input type="text" class="stock-name-input" value="${item.name}" onchange="updateStockData(${index}, 'name', this.value)"><button class="btn-search" onclick="searchStockPrice(${index})">🔍 查價</button><div class="btn-del" onclick="delRow('invest', ${index})">×</div></div><div class="stock-calc-row"><div class="calc-group"><label class="calc-label">股價</label><input type="number" class="calc-input" value="${item.price||''}" placeholder="0" onchange="updateStockData(${index}, 'price', this.value)"></div><div style="color:#CCC;">×</div><div class="calc-group"><label class="calc-label">股數</label><input type="number" class="calc-input" value="${item.shares||''}" placeholder="0" onchange="updateStockData(${index}, 'shares', this.value)"></div><div style="color:#CCC;">×</div><div class="calc-group"><label class="calc-label">匯率</label><input type="number" class="calc-input" value="${item.exrate||1}" placeholder="1" onchange="updateStockData(${index}, 'exrate', this.value)"></div></div><div class="stock-total-row"><span style="font-size:0.8rem;color:var(--accent-color);font-weight:bold;">= 市值</span><span style="font-weight:bold;">$${item.val.toLocaleString()}</span></div></div>`;
+        }
+        function searchStockPrice(index) {
+            let item = currentEditingData.invest[index];
+            let stockName = item.name.replace(/\(.*\)/, '');
+            let date = currentEditingDate; 
+            if(!stockName) { alert("請先輸入股票代號！"); return; }
+            window.open(`https://www.google.com/search?q=${encodeURIComponent(`${stockName} stock price ${date}`)}`, '_blank');
+        }
+        function updateSimpleData(type, index, key, val) { if(key === 'val') val = Number(val) || 0; currentEditingData[type][index][key] = val; updateEditTotals(); }
+        function updateStockData(index, key, val) { let item = currentEditingData.invest[index]; if(key === 'name') item.name = val; else { item[key] = Number(val) || 0; item.val = Math.round(item.price * item.shares * item.exrate); } renderAssetsInput(); }
+        function addRow(type) { if(type === 'invest') currentEditingData[type].push({name: "", val: 0, price: 0, shares: 0, exrate: 1}); else currentEditingData[type].push({name: "", val: 0}); renderAssetsInput(); }
+        function delRow(type, index) { if(confirm("刪除此項目？")) { currentEditingData[type].splice(index, 1); renderAssetsInput(); } }
+        function updateEditTotals() { ['cash', 'invest', 'prop', 'debt'].forEach(type => { let sum = currentEditingData[type].reduce((a, b) => a + b.val, 0); document.getElementById('total-' + type + '-edit').innerText = '$' + sum.toLocaleString(); }); }
+        function saveData() { currentEditingData.memo = document.getElementById('input-memo').value; dataStore[currentEditingDate] = currentEditingData; localStorage.setItem('myAssetData_v9_db', JSON.stringify(dataStore)); alert(`已儲存！`); document.getElementById('home-date-picker').value = currentEditingDate; loadHomeDataByDate(currentEditingDate); renderChart(); switchPage('home'); }
+        
+        function loadHomeDataByDate(date) {
+            let data = dataStore[date];
+            if (!data) {
+                document.getElementById('dash-net-worth').innerText = "無資料";
+                document.getElementById('dash-diff').innerText = "請選擇其他月份或去記帳";
+                document.getElementById('analysis-container').innerHTML = "<div style='text-align:center;color:#999;padding:10px;'>📭 本月尚未記帳</div>";
+                document.getElementById('cards-container').innerHTML = "";
+                return;
+            }
+            let netWorth = (getSum(data.cash) + getSum(data.invest) + getSum(data.prop)) - getSum(data.debt);
+            document.getElementById('dash-net-worth').innerText = 'NT$ ' + netWorth.toLocaleString();
+            
+            let dates = Object.keys(dataStore).sort();
+            let currIdx = dates.indexOf(date);
+            if (currIdx > 0) {
+                let prevD = dataStore[dates[currIdx - 1]];
+                let prevNet = (getSum(prevD.cash) + getSum(prevD.invest) + getSum(prevD.prop)) - getSum(prevD.debt);
+                let diff = netWorth - prevNet;
+                let sign = diff >= 0 ? '▲' : '▼';
+                let color = diff >= 0 ? 'var(--accent-color)' : 'var(--danger-color)';
+                document.getElementById('dash-diff').innerText = `${sign} 較上月 ${diff >= 0 ? '+' : ''}${diff.toLocaleString()}`;
+                document.getElementById('dash-diff').style.color = color;
+            } else { document.getElementById('dash-diff').innerText = "初始紀錄"; }
+
+            document.getElementById('analysis-container').innerHTML = generateAnalysis(data, date);
+            const container = document.getElementById('cards-container');
+            container.innerHTML = `
+                ${createCard('💰 現金資產', getSum(data.cash), data.cash, false)}
+                ${createCard('📈 投資部位', getSum(data.invest), data.invest, false)}
+                ${createCard('🏠 不動產', getSum(data.prop), data.prop, false)}
+                ${createCard('💸 負債總額', getSum(data.debt), data.debt, true)}
+            `;
+            toggleDetails();
+        }
+        function createCard(title, total, items, isRed) {
+            let color = isRed ? 'color:var(--danger-color);' : '';
+            let list = items.map(i => `<div class="detail-item"><span>${i.name||'--'}</span><span>$${i.val.toLocaleString()}</span></div>`).join('');
+            return `<div class="card card-category"><div style="display:flex; justify-content:space-between; font-weight:bold;"><span>${title}</span><span style="${color}">$${total.toLocaleString()}</span></div><div class="detail-list">${list}</div></div>`;
+        }
+        function setMode(show) { document.getElementById('detailToggle').checked = show; toggleDetails(); }
+        function toggleDetails() { let show = document.getElementById('detailToggle').checked; document.querySelectorAll('.card-category').forEach(c => show ? c.classList.add('show-details') : c.classList.remove('show-details')); }
+        function renderChart() {
+            const container = document.getElementById('css-chart'); container.innerHTML = '';
+            let dates = Object.keys(dataStore).sort(); if (dates.length === 0) return;
+            let showData = dates.slice(-5).map(d => ({date: d, net: (getSum(dataStore[d].cash) + getSum(dataStore[d].invest) + getSum(dataStore[d].prop)) - getSum(dataStore[d].debt)}));
+            let maxAbs = Math.max(...showData.map(d => Math.abs(d.net))) || 1;
+            let zeroLine = document.createElement('div'); zeroLine.className = 'zero-line'; container.appendChild(zeroLine);
+            showData.forEach(d => {
+                let wrapper = document.createElement('div'); wrapper.className = 'bar-wrapper';
+                let h = (Math.abs(d.net) / maxAbs) * 40; if(h < 2) h = 2;
+                let isPos = d.net >= 0;
+                let barHtml = `<div class="bar ${isPos?'positive':'negative'}" style="height:${h}%;"></div>`;
+                let textHtml = `<div class="bar-val-text" style="${isPos ? 'top:-20px' : 'bottom:-20px'}">${(d.net/10000).toFixed(0)}萬</div>`;
+                wrapper.innerHTML = `<div style="height:50%; width:100%; display:flex; align-items:${isPos?'flex-end':'flex-start'}; position:relative;">${barHtml} ${textHtml}</div><div class="bar-label">${d.date.substring(5)}月</div>`;
+                container.appendChild(wrapper);
+            });
+        }
+        function switchPage(page) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            document.getElementById('page-' + page).classList.add('active');
+            let icons = document.querySelectorAll('.nav-item');
+            if(page==='home') icons[0].classList.add('active');
+            if(page==='input') icons[1].classList.add('active');
+            if(page==='trend') { icons[2].classList.add('active'); renderChart(); }
+        }
+    </script>
+</body>
+</html>
