@@ -3,10 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>我的資產表 (V26 修復版)</title>
+    <title>我的資產表 (V24 FIRE版)</title>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
     <style>
         /* --- 風格設定 --- */
         :root {
@@ -19,13 +18,7 @@
             --info-bg: #E3E8E3;
             --border-color: #E0E0E0;
             --calc-bg: #F0F4F0;
-            --fire-color: #E8AF20;
-            
-            /* 圓餅圖顏色 */
-            --c-retire: #E8AF20;
-            --c-cash: #4A90E2;
-            --c-stock: #7D8668;
-            --c-prop: #9C27B0;
+            --fire-color: #E8AF20; /* 財富自由的金黃色 */
         }
 
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: var(--bg-color); color: var(--text-main); margin: 0; padding: 0; padding-bottom: 120px; }
@@ -36,16 +29,7 @@
         .header { text-align: center; font-weight: bold; font-size: 1.1rem; margin-bottom: 15px; padding-top: 10px; color: var(--text-main); }
         .card { background-color: var(--card-bg); padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); margin-bottom: 20px; position: relative; }
 
-        /* V25 圖表返回按鈕 */
-        .chart-back-btn {
-            position: absolute; top: 10px; right: 10px; z-index: 10;
-            background: rgba(255,255,255,0.9); border: 1px solid #CCC; padding: 5px 10px;
-            border-radius: 15px; font-size: 0.8rem; cursor: pointer; display: none;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1); color: var(--text-main); font-weight: bold;
-        }
-        .chart-back-btn:hover { background: #EEE; }
-
-        /* V24 FIRE 專區 */
+        /* V24 FIRE 專區樣式 */
         .fire-input-group { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; background: #FFF8E1; padding: 10px; border-radius: 8px; border: 1px solid #FFE082; }
         .fire-label { font-size: 0.9rem; color: #8D6E63; font-weight: bold; }
         .fire-input { width: 90px; padding: 5px; border: 1px solid #FFE082; border-radius: 5px; text-align: right; color: #E65100; font-weight: bold; }
@@ -64,14 +48,14 @@
         .trend-checkbox-label.active { border-color: var(--accent-color); background: #F0F4F0; color: var(--accent-color); font-weight: bold; }
         .trend-checkbox-label input { margin-right: 6px; accent-color: var(--accent-color); }
 
-        /* V21 圓餅圖控制 */
+        /* V21 圓餅圖 */
         .pie-controls { margin-top: 20px; border-top: 1px dashed #EEE; padding-top: 15px; }
         .filter-group { margin-bottom: 10px; }
         .filter-header { display: flex; align-items: center; font-weight: bold; margin-bottom: 5px; cursor: pointer; font-size: 0.9rem; }
         .filter-items { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; padding-left: 20px; }
         .filter-item { display: flex; align-items: center; font-size: 0.85rem; color: #666; cursor: pointer; }
         .checkbox-custom { accent-color: var(--accent-color); margin-right: 5px; }
-        .tag-retire { color: var(--c-retire); } .tag-cash { color: var(--c-cash); } .tag-stock { color: var(--c-stock); } .tag-prop { color: var(--c-prop); }
+        .tag-retire { color: #E8AF20; } .tag-cash { color: #4A90E2; } .tag-stock { color: #7D8668; } .tag-prop { color: #9C27B0; }
 
         /* 通用元件 */
         .date-picker-container { background: #FFF; padding: 10px 15px; border-radius: 10px; margin-bottom: 15px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border: 1px solid var(--accent-color); }
@@ -96,7 +80,6 @@
         .btn-add { width: 100%; padding: 10px; border: 1px dashed #CCC; color: #888; background: transparent; border-radius: 8px; cursor: pointer; margin-top: 5px; font-size: 0.9rem; }
         .btn-save { display: block; width: 100%; padding: 15px; background-color: var(--accent-color); color: white; border: none; border-radius: 12px; font-size: 1rem; font-weight: bold; cursor: pointer; margin-top: 20px; }
         .memo-input { width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 1rem; background: #FFF; margin-bottom: 15px; min-height: 80px; resize: vertical; }
-        
         .stock-row { background-color: var(--calc-bg); border-radius: 10px; padding: 10px; margin-bottom: 12px; border: 1px solid #E0E6E0; }
         .stock-name-row { display: flex; align-items: center; margin-bottom: 5px; }
         .stock-name-input { width: 100%; border: none; background: transparent; font-weight: bold; font-size: 0.95rem; color: var(--text-main); border-bottom: 1px dashed #CCC; padding-bottom: 3px; }
@@ -109,22 +92,6 @@
         .analysis-label { font-size: 0.95rem; font-weight: 500; color: #555; display: flex; align-items: center; }
         .trend-icon { margin-right: 8px; font-size: 1.1rem; width: 25px; text-align: center; display: inline-block;}
         .analysis-val { font-weight: bold; font-size: 1rem; }
-        
-        /* 柱狀圖 CSS */
-        .chart-container { display: flex; align-items: flex-end; justify-content: space-between; height: 220px; padding-top: 30px; border-bottom: 1px solid #EEE; position: relative; margin-bottom: 20px;}
-        .zero-line { position: absolute; left: 0; right: 0; top: 0; border-top: 1px dashed #CCC; z-index: 0; } 
-        .goal-line { position: absolute; left: 0; right: 0; border-top: 2px dashed var(--goal-line); z-index: 2; display: flex; align-items: center; }
-        .goal-label { position: absolute; right: 0; top: -20px; background: var(--goal-line); color: white; font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; }
-        .bar-wrapper { width: 15%; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; position: relative; z-index: 1; }
-        .bar-container { height: 100%; width: 100%; display: flex; align-items: flex-end; position: relative; }
-        .bar { width: 100%; transition: height 0.5s ease; opacity: 0.9; position: relative; }
-        .bar.positive { background: var(--accent-color); border-radius: 4px 4px 0 0; }
-        .bar.negative { background: var(--danger-color); border-radius: 0 0 4px 4px; }
-        .bar-label { position: absolute; bottom: -25px; font-size: 0.75rem; color: #999; width: 100%; text-align: center; }
-        .bar-val-text { position: absolute; font-size: 0.6rem; font-weight: bold; width: 140%; left: -20%; text-align: center; color: #666; }
-        .goal-input-container { display: flex; align-items: center; justify-content: flex-end; margin-bottom: 10px; font-size: 0.85rem; color: #888; }
-        .goal-input { width: 100px; padding: 5px; margin-left: 5px; border: 1px solid #DDD; border-radius: 5px; text-align: right; }
-
         .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; height: 60px; background: #FFF; display: flex; justify-content: space-around; align-items: center; border-top: 1px solid #EEE; z-index: 100; }
         .nav-item { flex: 1; text-align: center; color: #C0C0C0; cursor: pointer; display: flex; flex-direction: column; justify-content: center; height: 100%; }
         .nav-item.active { color: var(--accent-color); }
@@ -132,7 +99,6 @@
         .backup-section { text-align: center; margin-top: 30px; border-top: 1px solid #EEE; padding-top: 20px; display: flex; flex-direction: column; gap: 10px; align-items: center; }
         .btn-action { padding: 10px 20px; border-radius: 20px; font-size: 0.9rem; cursor: pointer; border: none; color: white; display: inline-flex; align-items: center; justify-content: center; font-weight: bold; margin: 5px;}
         .btn-excel { background-color: #217346; } .btn-backup { background-color: #607D8B; } .btn-import { background-color: #FFF; border: 1px solid #607D8B; color: #607D8B; }
-        .db-status { font-size: 0.8rem; color: #7D8668; margin-bottom: 5px; background: #EEF3EE; padding: 5px 10px; border-radius: 10px; }
     </style>
 </head>
 <body>
@@ -166,7 +132,6 @@
 
         <div class="backup-section">
             <button class="btn-action btn-excel" onclick="exportHistoryExcel()">匯出完整歷史 Excel</button>
-            <div id="db-status-display" class="db-status">系統檢查中...</div>
             <div>
                 <button class="btn-action btn-backup" onclick="exportData()">備份檔案</button>
                 <button class="btn-action btn-import" onclick="document.getElementById('importFile').click()">匯入檔案</button>
@@ -200,27 +165,11 @@
         </div>
 
         <div class="card">
-            <div class="section-title" style="display:flex; justify-content:space-between;">
-                <span>🍰 資產配置 (點擊可鑽取)</span>
-            </div>
-            <div style="position: relative; height:300px; width:100%;">
+            <div class="section-title">🍰 資產配置 (圓餅圖)</div>
+            <div style="position: relative; height:250px; width:100%;">
                 <canvas id="allocationChart"></canvas>
-                <div id="chart-back-btn" class="chart-back-btn" onclick="resetPieChart()">🔙 返回總覽</div>
             </div>
             <div class="pie-controls" id="pie-controls"></div>
-        </div>
-
-        <div class="card">
-            <div class="section-title">🏆 淨資產目標追蹤</div>
-            <div class="goal-input-container">
-                目標：<input type="number" id="net-worth-goal" class="goal-input" placeholder="5000000" onchange="saveGoal()">
-            </div>
-            <div class="chart-container" id="net-worth-chart"></div>
-        </div>
-
-        <div class="card">
-            <div class="section-title">🔥 退休計畫 (大盤 ETF)</div>
-            <div class="chart-container" id="retirement-chart"></div>
         </div>
 
         <div class="card" style="border: 2px solid #E8AF20;">
@@ -270,12 +219,9 @@
     </div>
 
     <script>
-        Chart.register(ChartDataLabels);
-
         let dataStore = {}; let myPieChart = null; let myTrendChart = null; 
+        // FIRE 設定預設值
         let fireSettings = { goal: 600000, yield: 5 };
-        let currentPieLevel = 'root'; let pieDataCache = {};
-        let userGoal = 0;
 
         const defaultTemplate = {
             cash: [{name: "國泰世華", val: 0}, {name: "台新 Richart", val: 0}],
@@ -296,23 +242,22 @@
             { id: 'tw_stock', label: '🇹🇼 台股', color: '#009688', checked: false, fn: (d) => filterSum(d.invest, '台股|0050') }
         ];
 
+        function filterSum(arr, keywordRegex) {
+            let re = new RegExp(keywordRegex, 'i');
+            return arr.filter(i => re.test(i.name)).reduce((a,b)=>a+b.val, 0);
+        }
+
         window.onload = function() {
             let stored = localStorage.getItem('myAssetData_v9_db');
-            if (stored) {
-                dataStore = JSON.parse(stored);
-                repairData(); // 🔥 自動修復壞掉的數據
-            } else {
-                migrateOrInitData();
-            }
+            if (stored) dataStore = JSON.parse(stored); else migrateOrInitData();
             
+            // 載入 FIRE 設定
             let fs = localStorage.getItem('myFireSettings');
             if(fs) { 
                 fireSettings = JSON.parse(fs); 
                 document.getElementById('fire-income-goal').value = fireSettings.goal;
                 document.getElementById('fire-yield').value = fireSettings.yield;
             }
-            let goal = localStorage.getItem('myAssetGoal');
-            if(goal) { userGoal = Number(goal); document.getElementById('net-worth-goal').value = userGoal; }
 
             let today = new Date().toISOString().substring(0, 7);
             let targetDate = today;
@@ -322,199 +267,43 @@
             document.getElementById('home-date-picker').value = targetDate;
             document.getElementById('input-date-picker').value = targetDate;
             
-            updateDBStatus();
             loadHomeDataByDate(targetDate);
             loadInputDataByDate(targetDate);
             renderCharts(); 
         };
 
-        // --- V26 關鍵修復邏輯 ---
-        function repairData() {
-            let hasFix = false;
-            for(let date in dataStore) {
-                let d = dataStore[date];
-                // 修復投資
-                if(d.invest) {
-                    d.invest.forEach(i => {
-                        // 強制轉數字，如果是 NaN 就變 0
-                        if(isNaN(i.val)) { i.val = 0; hasFix = true; }
-                        if(isNaN(i.price)) { i.price = 0; hasFix = true; }
-                        if(isNaN(i.shares)) { i.shares = 0; hasFix = true; }
-                        if(isNaN(i.exrate)) { i.exrate = 1; hasFix = true; }
-                    });
-                }
-                // 修復其他
-                ['cash', 'prop', 'debt'].forEach(cat => {
-                    if(d[cat]) {
-                        d[cat].forEach(i => {
-                            if(isNaN(i.val)) { i.val = 0; hasFix = true; }
-                        });
-                    }
-                });
-            }
-            if(hasFix) {
-                console.log("發現非數值資料，已自動修復。");
-                localStorage.setItem('myAssetData_v9_db', JSON.stringify(dataStore));
-            }
-        }
-
-        function filterSum(arr, keywordRegex) {
-            let re = new RegExp(keywordRegex, 'i');
-            return arr.filter(i => re.test(i.name)).reduce((a,b) => {
-                let v = Number(b.val);
-                return a + (isNaN(v) ? 0 : v); // 防呆
-            }, 0);
-        }
-
-        function getSum(arr) { 
-            return arr ? arr.reduce((a, b) => {
-                let v = Number(b.val);
-                return a + (isNaN(v) ? 0 : v); // 防呆
-            }, 0) : 0; 
-        }
-
-        // --- V25 互動圓餅圖 ---
-        function initPieData(date) {
-            let d = dataStore[date];
-            if(!d) return;
-
-            let keywords = ["VOO", "QQQ", "SPY", "0050", "大盤"];
-            let retireItems = [], stockItems = [];
-            
-            d.invest.forEach(i => {
-                if(keywords.some(k => i.name.toUpperCase().includes(k))) retireItems.push(i);
-                else stockItems.push(i);
-            });
-
-            pieDataCache = {
-                'root': {
-                    labels: ['退休計畫', '其他投資', '現金', '房產'],
-                    data: [getSum(retireItems), getSum(stockItems), getSum(d.cash), getSum(d.prop)],
-                    colors: ['#E8AF20', '#7D8668', '#4A90E2', '#9C27B0'],
-                    ids: ['retire', 'stock', 'cash', 'prop']
-                },
-                'retire': { labels: retireItems.map(i=>i.name), data: retireItems.map(i=>i.val), colors: retireItems.map(()=>'#FFD54F') },
-                'stock': { labels: stockItems.map(i=>i.name), data: stockItems.map(i=>i.val), colors: stockItems.map(()=>'#AED581') },
-                'cash': { labels: d.cash.map(i=>i.name), data: d.cash.map(i=>i.val), colors: d.cash.map(()=>'#64B5F6') },
-                'prop': { labels: d.prop.map(i=>i.name), data: d.prop.map(i=>i.val), colors: d.prop.map(()=>'#BA68C8') }
-            };
-            
-            currentPieLevel = 'root';
-            drawPieChart('root');
-            updatePieControls('root');
-        }
-
-        function drawPieChart(level) {
-            let ds = pieDataCache[level];
-            let backBtn = document.getElementById('chart-back-btn');
-            backBtn.style.display = (level === 'root') ? 'none' : 'block';
-
-            let finalLabels = [], finalData = [], finalColors = [], finalIds = [];
-            ds.data.forEach((val, idx) => {
-                if(val > 0) {
-                    finalLabels.push(ds.labels[idx]);
-                    finalData.push(val);
-                    finalColors.push(ds.colors[idx]);
-                    if(ds.ids) finalIds.push(ds.ids[idx]);
-                }
-            });
-
-            const ctx = document.getElementById('allocationChart').getContext('2d');
-            if (myPieChart) myPieChart.destroy();
-
-            myPieChart = new Chart(ctx, {
-                type: 'doughnut',
-                data: {
-                    labels: finalLabels,
-                    datasets: [{
-                        data: finalData,
-                        backgroundColor: finalColors,
-                        borderWidth: 1,
-                        ids: finalIds
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    onClick: (evt, elements) => {
-                        if(currentPieLevel !== 'root') return;
-                        if(elements.length > 0) {
-                            let idx = elements[0].index;
-                            let clickedId = myPieChart.data.datasets[0].ids[idx];
-                            if(pieDataCache[clickedId] && pieDataCache[clickedId].data.length > 0) {
-                                currentPieLevel = clickedId;
-                                drawPieChart(clickedId);
-                                updatePieControls(clickedId);
-                            }
-                        }
-                    },
-                    plugins: {
-                        legend: { display: false },
-                        datalabels: {
-                            color: '#4A4A4A',
-                            anchor: 'end',
-                            align: 'start',
-                            offset: 10,
-                            borderWidth: 2,
-                            borderColor: 'white',
-                            borderRadius: 25,
-                            backgroundColor: (context) => context.dataset.backgroundColor,
-                            font: { weight: 'bold', size: 11 },
-                            formatter: (value, ctx) => {
-                                let label = ctx.chart.data.labels[ctx.dataIndex];
-                                if(label.length > 5) label = label.substring(0,5) + '..';
-                                return label + '\n$' + (value/10000).toFixed(1) + '萬';
-                            }
-                        }
-                    }
-                }
-            });
-        }
-
-        function resetPieChart() {
-            currentPieLevel = 'root';
-            drawPieChart('root');
-            updatePieControls('root');
-        }
-
-        function updatePieControls(level) {
-            const container = document.getElementById('pie-controls');
-            container.innerHTML = '';
-            let ds = pieDataCache[level];
-            let html = `<div class="filter-group"><div class="filter-header" style="color:#666;">${level==='root'?'總覽項目':'詳細項目 ('+level+')'}</div><div class="filter-items">`;
-            ds.labels.forEach((label, idx) => {
-                if(ds.data[idx] > 0) html += `<div class="filter-item" style="color:${ds.colors[idx]}">● ${label}</div>`;
-            });
-            html += `</div></div>`;
-            container.innerHTML = html;
-        }
-
         // --- V24 FIRE 邏輯 ---
         function updateFIRE() {
+            // 1. 取得設定
             let goal = Number(document.getElementById('fire-income-goal').value) || 600000;
             let yieldRate = Number(document.getElementById('fire-yield').value) || 5;
             fireSettings = { goal, yield: yieldRate };
             localStorage.setItem('myFireSettings', JSON.stringify(fireSettings));
 
+            // 2. 計算目標本金 (FIRE Number) = 年支出 / 殖利率
             let targetCapital = goal / (yieldRate / 100);
             document.getElementById('fire-target-num').innerText = '$' + (targetCapital/10000).toFixed(0) + '萬';
 
+            // 3. 計算目前退休資產 (採用最新的月份資料)
             let dates = Object.keys(dataStore).sort();
             if(dates.length === 0) return;
             let lastDate = dates[dates.length-1];
             let d = dataStore[lastDate];
 
+            // 退休資產 = 退休計畫ETF + 現金
             let retireInvest = getRetirementSum(d.invest);
             let cash = getSum(d.cash);
             let currentAssets = retireInvest + cash;
 
             document.getElementById('fire-current-assets').innerText = '$' + currentAssets.toLocaleString();
 
+            // 4. 計算進度
             let progress = Math.min((currentAssets / targetCapital) * 100, 100);
             let bar = document.getElementById('fire-progress-bar');
             bar.style.width = progress + '%';
             document.getElementById('fire-progress-text').innerText = progress.toFixed(1) + '%';
             
+            // 5. 預估被動收入 & 缺口
             let estIncome = currentAssets * (yieldRate / 100);
             document.getElementById('fire-passive-income').innerText = '$' + Math.round(estIncome).toLocaleString() + ' / 年';
             
@@ -526,10 +315,7 @@
             let keywords = ["VOO", "QQQ", "SPY", "0050", "大盤"];
             return investList.filter(item => {
                 return keywords.some(k => item.name.toUpperCase().includes(k));
-            }).reduce((a, b) => {
-                let v = Number(b.val);
-                return a + (isNaN(v) ? 0 : v);
-            }, 0);
+            }).reduce((a, b) => a + b.val, 0);
         }
 
         // --- V23 趨勢圖邏輯 ---
@@ -568,94 +354,59 @@
             });
         }
 
-        // --- 柱狀圖 (HTML/CSS) ---
-        function drawCustomBarChart(containerId, dates, valueFn, goalValue) {
-            const container = document.getElementById(containerId);
-            container.innerHTML = '';
-            
-            let values = dates.map(d => {
-                let v = valueFn(d);
-                return isNaN(v) ? 0 : v; // 防呆
-            });
-            
-            let maxVal = Math.max(...values);
-            if(goalValue > 0) maxVal = Math.max(maxVal, goalValue);
-            if(maxVal === 0) maxVal = 100;
-
-            if(goalValue > 0) {
-                let goalH = (goalValue / maxVal) * 80; 
-                let goalLine = document.createElement('div');
-                goalLine.className = 'goal-line';
-                goalLine.style.bottom = goalH + '%';
-                goalLine.innerHTML = `<div class="goal-label">目標 $${(goalValue/10000).toFixed(0)}萬</div>`;
-                container.appendChild(goalLine);
-            }
-
-            let zeroLine = document.createElement('div');
-            zeroLine.className = 'zero-line';
-            container.appendChild(zeroLine); 
-
-            dates.forEach((d, i) => {
-                let val = values[i];
-                let h = (val / maxVal) * 80; 
-                if(h < 1 && val > 0) h = 1;
-                
-                let wrapper = document.createElement('div');
-                wrapper.className = 'bar-wrapper';
-                
-                let barClass = val >= 0 ? 'positive' : 'negative';
-                let barHtml = `<div class="bar ${barClass}" style="height:${Math.abs(h)}%;"></div>`;
-                let textHtml = `<div class="bar-val-text" style="bottom:${Math.abs(h)+2}%">${(val/10000).toFixed(0)}萬</div>`;
-                
-                wrapper.innerHTML = `
-                    <div class="bar-container">
-                        ${barHtml} ${textHtml}
-                    </div>
-                    <div class="bar-label">${d.substring(5)}月</div>
-                `;
-                container.appendChild(wrapper);
-            });
-        }
-
-        // --- 通用功能 ---
         function renderCharts() {
             let dates = Object.keys(dataStore).sort(); if (dates.length === 0) return;
             let targetDate = document.getElementById('home-date-picker').value || dates[dates.length-1];
             initTrendControls(); updateTrendChart();
-            initPieData(targetDate);
-            updateFIRE();
-            drawCustomBarChart('net-worth-chart', dates.slice(-5), (d) => getNetWorth(dataStore[d]), userGoal);
-            drawCustomBarChart('retirement-chart', dates.slice(-5), (d) => getRetirementSum(dataStore[d].invest), 0);
+            initPieControls(targetDate);
+            updateFIRE(); // V24 新增
         }
 
+        // --- 圓餅圖邏輯 (V21) ---
+        function updatePieChart() {
+            let selectedItems = [];
+            document.querySelectorAll('.item-checkbox:checked').forEach(cb => { selectedItems.push({ cat: cb.dataset.cat, val: Number(cb.dataset.val), label: cb.dataset.label }); });
+            let categories = { 'retire': { label: '退休計畫', val: 0, color: '#E8AF20' }, 'stock': { label: '其他投資', val: 0, color: '#7D8668' }, 'cash': { label: '現金', val: 0, color: '#4A90E2' }, 'prop': { label: '房產', val: 0, color: '#9C27B0' } };
+            selectedItems.forEach(item => { if(categories[item.cat]) categories[item.cat].val += item.val; });
+            let labels = [], data = [], colors = [];
+            Object.values(categories).forEach(c => { if(c.val > 0) { labels.push(c.label); data.push(c.val); colors.push(c.color); } });
+            const ctx = document.getElementById('allocationChart').getContext('2d');
+            if (myPieChart) myPieChart.destroy();
+            myPieChart = new Chart(ctx, { type: 'doughnut', data: { labels: labels, datasets: [{ data: data, backgroundColor: colors, borderWidth: 1 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' }, tooltip: { callbacks: { label: function(context) { let label = context.label || ''; let value = context.raw || 0; let total = context.chart._metasets[context.datasetIndex].total; let percentage = Math.round((value / total) * 100) + '%'; return label + ': $' + (value/10000).toFixed(1) + '萬 (' + percentage + ')'; }}} } } });
+        }
+        function initPieControls(date) {
+            let d = dataStore[date]; if(!d) return;
+            const container = document.getElementById('pie-controls'); container.innerHTML = '';
+            let groups = { 'retire': { label: '🔥 退休計畫', items: [], color: 'tag-retire' }, 'stock': { label: '📈 其他投資', items: [], color: 'tag-stock' }, 'cash': { label: '💰 現金', items: [], color: 'tag-cash' }, 'prop': { label: '🏠 房產', items: [], color: 'tag-prop' } };
+            let keywords = ["VOO", "QQQ", "SPY", "0050", "大盤"];
+            d.invest.forEach(i => { if(keywords.some(k => i.name.toUpperCase().includes(k))) groups.retire.items.push(i); else groups.stock.items.push(i); });
+            groups.cash.items = d.cash; groups.prop.items = d.prop;
+            Object.keys(groups).forEach(key => {
+                let g = groups[key]; if(g.items.length === 0) return;
+                let groupHtml = `<div class="filter-group"><div class="filter-header ${g.color}"><input type="checkbox" class="group-checkbox checkbox-custom" data-group="${key}" checked onchange="toggleGroup('${key}', this.checked)">${g.label}</div><div class="filter-items">`;
+                g.items.forEach((item, idx) => { groupHtml += `<label class="filter-item"><input type="checkbox" class="item-checkbox checkbox-custom group-${key}" data-cat="${key}" data-val="${item.val}" data-label="${item.name}" checked onchange="updatePieChart()">${item.name}</label>`; });
+                groupHtml += `</div></div>`; container.innerHTML += groupHtml;
+            }); updatePieChart();
+        }
+        function toggleGroup(groupKey, isChecked) { document.querySelectorAll(`.group-${groupKey}`).forEach(cb => { cb.checked = isChecked; }); updatePieChart(); }
+
+        // --- 通用 ---
         function getTodayStr() { return new Date().toISOString().substring(0, 7); }
         function migrateOrInitData() { dataStore["2026-01"] = JSON.parse(JSON.stringify(defaultTemplate)); localStorage.setItem('myAssetData_v9_db', JSON.stringify(dataStore)); }
         function saveData() { currentEditingData.memo = document.getElementById('input-memo').value; dataStore[currentEditingDate] = currentEditingData; localStorage.setItem('myAssetData_v9_db', JSON.stringify(dataStore)); alert(`已儲存！`); loadHomeDataByDate(currentEditingDate); renderCharts(); switchPage('home'); }
-        function saveGoal() { userGoal = Number(document.getElementById('net-worth-goal').value); localStorage.setItem('myAssetGoal', userGoal); renderCharts(); }
+        function getCategoryValue(data, cat) { if(cat === 'debt') return getSum(data.debt); if(cat === 'net') return getNetWorth(data); if(cat === 'cash') return getSum(data.cash); if(cat === 'invest') return getSum(data.invest); if(cat === 'card') return filterSum(data.debt, '卡'); if(cat === 'loan') return filterSum(data.debt, '房貸|信貸'); return 0; }
         function getNetWorth(d) { return (getSum(d.cash)+getSum(d.invest)+getSum(d.prop)) - getSum(d.debt); }
-        
-        function updateDBStatus() {
-            let dates = Object.keys(dataStore).sort();
-            let count = dates.length;
-            let msg = count > 0 ? `📚 系統內存有 ${count} 個月份資料 (${dates[0]} ~ ${dates[count-1]})` : `📭 目前系統內無資料`;
-            document.getElementById('db-status-display').innerText = msg;
-        }
-
-        function loadInputDataByDate(date) {
-            currentEditingDate = date; if (dataStore[date]) currentEditingData = JSON.parse(JSON.stringify(dataStore[date])); else { let dates = Object.keys(dataStore).sort(); if(dates.length > 0) currentEditingData = JSON.parse(JSON.stringify(dataStore[dates[dates.length-1]])); else currentEditingData = JSON.parse(JSON.stringify(defaultTemplate)); }
-            if(currentEditingData.invest) { currentEditingData.invest.forEach(i => { if(isNaN(i.price)) i.price=0; if(isNaN(i.shares)) i.shares=0; if(isNaN(i.exrate)) i.exrate=1; }); }
-            document.getElementById('input-memo').value = currentEditingData.memo || ""; renderAssetsInput();
-        }
+        function loadInputDataByDate(date) { currentEditingDate = date; if (dataStore[date]) currentEditingData = JSON.parse(JSON.stringify(dataStore[date])); else { let dates = Object.keys(dataStore).sort(); if(dates.length > 0) currentEditingData = JSON.parse(JSON.stringify(dataStore[dates[dates.length-1]])); else currentEditingData = JSON.parse(JSON.stringify(defaultTemplate)); } if(currentEditingData.invest) { currentEditingData.invest.forEach(i => { if(i.price===undefined) i.price=0; if(i.shares===undefined) i.shares=0; if(i.exrate===undefined) i.exrate=1; }); } document.getElementById('input-memo').value = currentEditingData.memo || ""; renderAssetsInput(); }
         function renderAssetsInput() { const container = document.getElementById('input-sections-assets'); container.innerHTML = ''; ['cash', 'invest', 'prop', 'debt'].forEach(type => { let title = type==='cash'?'💰 現金':(type==='invest'?'📈 投資':(type==='prop'?'🏠 不動產':'💸 負債')); let html = `<div class="card"><div class="section-header">${title} <span id="total-${type}-edit" style="font-size:0.9rem; color:#888;">$0</span></div><div id="list-${type}">`; if(type === 'invest') currentEditingData[type].forEach((item, index) => html += buildStockRowHtml(index, item)); else currentEditingData[type].forEach((item, index) => html += buildRowHtml(type, index, item)); html += `</div><button class="btn-add" onclick="addRow('${type}')">+ 新增項目</button></div>`; container.innerHTML += html; }); updateEditTotals(); }
         function buildRowHtml(type, index, item) { return `<div class="dynamic-row"><input type="text" class="dynamic-name" value="${item.name}" onchange="updateSimpleData('${type}', ${index}, 'name', this.value)"><input type="number" class="dynamic-val" value="${item.val}" placeholder="0" onchange="updateSimpleData('${type}', ${index}, 'val', this.value)"><div class="btn-del" onclick="delRow('${type}', ${index})">×</div></div>`; }
-        function buildStockRowHtml(index, item) { return `<div class="stock-row"><div class="stock-name-row"><input type="text" class="stock-name-input" value="${item.name}" onchange="updateStockData(${index}, 'name', this.value)"><button class="btn-search" onclick="searchStockPrice(${index})">🔍 查價</button><div class="btn-del" onclick="delRow('invest', ${index})">×</div></div><div class="stock-calc-row"><div class="calc-group"><label class="calc-label">股價</label><input type="number" class="calc-input" value="${item.price||''}" placeholder="0" onchange="updateStockData(${index}, 'price', this.value)"></div><div style="color:#CCC;">×</div><div class="calc-group"><label class="calc-label">股數</label><input type="number" class="calc-input" value="${item.shares||''}" placeholder="0" onchange="updateStockData(${index}, 'shares', this.value)"></div><div style="color:#CCC;">×</div><div class="calc-group"><label class="calc-label">匯率</label><input type="number" class="calc-input" value="${item.exrate||1}" placeholder="1" onchange="updateStockData(${index}, 'exrate', this.value)"></div></div><div class="stock-total-row"><span style="font-size:0.8rem;color:var(--accent-color);font-weight:bold;">= 市值</span><span style="font-weight:bold;">$${(item.val||0).toLocaleString()}</span></div></div>`; }
+        function buildStockRowHtml(index, item) { return `<div class="stock-row"><div class="stock-name-row"><input type="text" class="stock-name-input" value="${item.name}" onchange="updateStockData(${index}, 'name', this.value)"><button class="btn-search" onclick="searchStockPrice(${index})">🔍 查價</button><div class="btn-del" onclick="delRow('invest', ${index})">×</div></div><div class="stock-calc-row"><div class="calc-group"><label class="calc-label">股價</label><input type="number" class="calc-input" value="${item.price||''}" placeholder="0" onchange="updateStockData(${index}, 'price', this.value)"></div><div style="color:#CCC;">×</div><div class="calc-group"><label class="calc-label">股數</label><input type="number" class="calc-input" value="${item.shares||''}" placeholder="0" onchange="updateStockData(${index}, 'shares', this.value)"></div><div style="color:#CCC;">×</div><div class="calc-group"><label class="calc-label">匯率</label><input type="number" class="calc-input" value="${item.exrate||1}" placeholder="1" onchange="updateStockData(${index}, 'exrate', this.value)"></div></div><div class="stock-total-row"><span style="font-size:0.8rem;color:var(--accent-color);font-weight:bold;">= 市值</span><span style="font-weight:bold;">$${item.val.toLocaleString()}</span></div></div>`; }
         function searchStockPrice(index) { let item = currentEditingData.invest[index]; let stockName = item.name.replace(/\(.*\)/, ''); window.open(`https://www.google.com/search?q=${encodeURIComponent(`${stockName} stock price ${currentEditingDate}`)}`, '_blank'); }
         function updateSimpleData(type, index, key, val) { if(key === 'val') val = Number(val) || 0; currentEditingData[type][index][key] = val; updateEditTotals(); }
         function updateStockData(index, key, val) { let item = currentEditingData.invest[index]; if(key === 'name') item.name = val; else { item[key] = Number(val) || 0; item.val = Math.round(item.price * item.shares * item.exrate); } renderAssetsInput(); }
         function addRow(type) { if(type === 'invest') currentEditingData[type].push({name: "", val: 0, price: 0, shares: 0, exrate: 1}); else currentEditingData[type].push({name: "", val: 0}); renderAssetsInput(); }
         function delRow(type, index) { if(confirm("刪除？")) { currentEditingData[type].splice(index, 1); renderAssetsInput(); } }
-        function updateEditTotals() { ['cash', 'invest', 'prop', 'debt'].forEach(type => { let sum = currentEditingData[type].reduce((a, b) => a + (isNaN(Number(b.val))?0:Number(b.val)), 0); document.getElementById('total-' + type + '-edit').innerText = '$' + sum.toLocaleString(); }); }
-        
+        function updateEditTotals() { ['cash', 'invest', 'prop', 'debt'].forEach(type => { let sum = currentEditingData[type].reduce((a, b) => a + b.val, 0); document.getElementById('total-' + type + '-edit').innerText = '$' + sum.toLocaleString(); }); }
+        function getSum(arr) { return arr ? arr.reduce((a, b) => a + b.val, 0) : 0; }
         function switchPage(page) { document.querySelectorAll('.page').forEach(p => p.classList.remove('active')); document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active')); document.getElementById('page-' + page).classList.add('active'); if(page==='home') document.querySelectorAll('.nav-item')[0].classList.add('active'); if(page==='input') document.querySelectorAll('.nav-item')[1].classList.add('active'); if(page==='trend') { document.querySelectorAll('.nav-item')[2].classList.add('active'); renderCharts(); } }
         function loadHomeDataByDate(date) {
             let data = dataStore[date]; if (!data) { document.getElementById('dash-net-worth').innerText = "無資料"; document.getElementById('dash-diff').innerText = "--"; document.getElementById('analysis-container').innerHTML = "<div style='text-align:center;color:#999;padding:10px;'>📭 本月尚未記帳</div>"; document.getElementById('cards-container').innerHTML = ""; return; }
