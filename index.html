@@ -3,8 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>我的資產表 (V20 戰略版)</title>
+    <title>我的資產表 (V21 趨勢戰情)</title>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
     <style>
         /* --- 風格設定 --- */
         :root {
@@ -14,10 +16,8 @@
             --text-sub: #9B9B9B;
             --accent-color: #7D8668;   /* 抹茶綠 */
             --danger-color: #B85C5C;   /* 豆沙紅 */
-            --goal-line: #E8AF20;      /* 目標線金黃色 */
             --link-blue: #4A90E2;
-            --border-color: #E0E0E0;
-            --calc-bg: #F0F4F0;
+            --btn-gray: #E0E0E0;
         }
 
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: var(--bg-color); color: var(--text-main); margin: 0; padding: 0; padding-bottom: 120px; }
@@ -26,42 +26,32 @@
         @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 
         .header { text-align: center; font-weight: bold; font-size: 1.1rem; margin-bottom: 15px; padding-top: 10px; color: var(--text-main); }
-        .card { background-color: var(--card-bg); padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); margin-bottom: 20px; position: relative; }
+        .card { background-color: var(--card-bg); padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); margin-bottom: 20px; }
 
-        /* 通用元件 */
+        /* ---------------- V21 新增圖表控制區 ---------------- */
+        .chart-controls { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 15px; justify-content: center; }
+        .chart-toggle {
+            padding: 5px 12px; border-radius: 15px; font-size: 0.85rem; cursor: pointer;
+            border: 1px solid transparent; background: var(--btn-gray); color: #666; transition: 0.2s; user-select: none;
+        }
+        /* 各種線條的顏色定義 (Active 狀態) */
+        .chart-toggle.active[data-type="net"] { background: #7D8668; color: white; } /* 淨資產-綠 */
+        .chart-toggle.active[data-type="debt"] { background: #B85C5C; color: white; } /* 負債-紅 */
+        .chart-toggle.active[data-type="cash"] { background: #4A90E2; color: white; } /* 現金-藍 */
+        .chart-toggle.active[data-type="invest"] { background: #F5A623; color: white; } /* 投資-橘 */
+        .chart-toggle.active[data-type="card"] { background: #9013FE; color: white; } /* 信用卡-紫 */
+        .chart-toggle.active[data-type="house"] { background: #50E3C2; color: #333; } /* 房貸-青 */
+
+        .chart-box { position: relative; height: 300px; width: 100%; }
+        /* ---------------------------------------------------- */
+
         .date-picker-container { background: #FFF; padding: 10px 15px; border-radius: 10px; margin-bottom: 15px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border: 1px solid var(--accent-color); }
         .date-input { border: none; background: transparent; font-size: 1rem; color: var(--text-main); font-family: inherit; font-weight: bold; cursor: pointer; }
+        
         .big-number { font-size: 2.2rem; font-weight: 700; margin: 10px 0; text-align: center; }
         .sub-number { font-size: 0.9rem; text-align: center; margin-bottom: 10px; font-weight: bold; }
         .section-title { font-size: 1rem; font-weight: bold; margin-bottom: 15px; color: var(--text-main); border-left: 4px solid var(--accent-color); padding-left: 10px; }
 
-        /* V20 比較工具樣式 */
-        .compare-tools { display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px; }
-        .compare-row { display: flex; justify-content: space-between; align-items: center; gap: 5px; }
-        .compare-select { flex: 1; padding: 8px; border: 1px solid #DDD; border-radius: 8px; background: #FAFAFA; font-size: 0.9rem; }
-        .compare-result { background: #F8F9FA; padding: 15px; border-radius: 10px; text-align: center; border: 1px dashed #CCC; }
-        .compare-val { font-size: 1.5rem; font-weight: bold; margin: 5px 0; }
-        .compare-diff { font-size: 0.9rem; font-weight: bold; }
-
-        /* V20 目標設定樣式 */
-        .goal-input-container { display: flex; align-items: center; justify-content: flex-end; margin-bottom: 10px; font-size: 0.85rem; color: #888; }
-        .goal-input { width: 100px; padding: 5px; margin-left: 5px; border: 1px solid #DDD; border-radius: 5px; text-align: right; }
-
-        /* 圖表樣式 (增強版) */
-        .chart-container { display: flex; align-items: flex-end; justify-content: space-between; height: 220px; padding-top: 30px; border-bottom: 1px solid #EEE; position: relative; margin-bottom: 20px;}
-        .zero-line { position: absolute; left: 0; right: 0; top: 0; border-top: 1px dashed #CCC; z-index: 0; } /* JS控制位置 */
-        .goal-line { position: absolute; left: 0; right: 0; border-top: 2px dashed var(--goal-line); z-index: 2; display: flex; align-items: center; }
-        .goal-label { position: absolute; right: 0; top: -20px; background: var(--goal-line); color: white; font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; }
-        
-        .bar-wrapper { width: 15%; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; position: relative; z-index: 1; }
-        .bar-container { height: 100%; width: 100%; display: flex; align-items: flex-end; position: relative; } /* JS控制對齊 */
-        .bar { width: 100%; transition: height 0.5s ease; opacity: 0.9; position: relative; }
-        .bar.positive { background: var(--accent-color); border-radius: 4px 4px 0 0; }
-        .bar.negative { background: var(--danger-color); border-radius: 0 0 4px 4px; }
-        .bar-label { position: absolute; bottom: -25px; font-size: 0.75rem; color: #999; width: 100%; text-align: center; }
-        .bar-val-text { position: absolute; font-size: 0.6rem; font-weight: bold; width: 140%; left: -20%; text-align: center; color: #666; }
-
-        /* 輸入與細節列表 */
         .toggle-container { display: flex; justify-content: center; align-items: center; margin-bottom: 10px; font-size: 0.9rem; color: var(--text-sub); }
         .switch { position: relative; display: inline-block; width: 40px; height: 20px; margin: 0 10px;}
         .switch input { opacity: 0; width: 0; height: 0; }
@@ -69,6 +59,7 @@
         .slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 2px; bottom: 2px; background-color: white; transition: .4s; border-radius: 50%; }
         input:checked + .slider { background-color: var(--accent-color); }
         input:checked + .slider:before { transform: translateX(20px); }
+
         .card-category .detail-list { display: none; margin-top: 10px; border-top: 1px dashed #EEE; padding-top: 10px; }
         .card-category.show-details .detail-list { display: block !important; }
         .detail-item { display: flex; justify-content: space-between; font-size: 0.85rem; color: #888; margin-bottom: 6px; padding-left: 10px; }
@@ -76,16 +67,7 @@
         .dynamic-row { display: flex; align-items: center; margin-bottom: 8px; }
         .dynamic-name { flex: 1; padding: 10px; border: 1px solid var(--border-color); border-radius: 8px 0 0 8px; background: #FAFAFA; font-size: 0.95rem; }
         .dynamic-val { width: 110px; padding: 10px; border: 1px solid var(--border-color); border-radius: 0 8px 8px 0; text-align: right; font-size: 1rem; }
-        .btn-del { margin-left: 8px; color: #CCC; font-size: 1.2rem; cursor: pointer; padding: 5px; }
-        .btn-add { width: 100%; padding: 10px; border: 1px dashed #CCC; color: #888; background: transparent; border-radius: 8px; cursor: pointer; margin-top: 5px; font-size: 0.9rem; }
-        .btn-save { display: block; width: 100%; padding: 15px; background-color: var(--accent-color); color: white; border: none; border-radius: 12px; font-size: 1rem; font-weight: bold; cursor: pointer; margin-top: 20px; }
-        .memo-input { width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 1rem; background: #FFF; margin-bottom: 15px; min-height: 80px; resize: vertical; }
-        .info-board { background-color: var(--info-bg); padding: 15px; border-radius: 12px; margin-bottom: 20px; color: #556B55; font-size: 0.9rem; position: relative; }
-        .analysis-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px dashed #EEE; }
-        .analysis-label { font-size: 0.95rem; font-weight: 500; color: #555; }
-        .analysis-val { font-weight: bold; font-size: 1rem; }
-
-        /* 投資計算機 */
+        
         .stock-row { background-color: var(--calc-bg); border-radius: 10px; padding: 10px; margin-bottom: 12px; border: 1px solid #E0E6E0; }
         .stock-name-row { display: flex; align-items: center; margin-bottom: 5px; }
         .stock-name-input { width: 100%; border: none; background: transparent; font-weight: bold; font-size: 0.95rem; color: var(--text-main); border-bottom: 1px dashed #CCC; padding-bottom: 3px; }
@@ -94,6 +76,15 @@
         .calc-group { display: flex; flex-direction: column; width: 30%; }
         .calc-input { width: 100%; padding: 5px; border: 1px solid #DDD; border-radius: 6px; text-align: center; }
         .stock-total-row { display: flex; justify-content: space-between; align-items: center; margin-top: 5px; padding-top: 5px; border-top: 1px solid rgba(0,0,0,0.05); }
+
+        .btn-del { margin-left: 8px; color: #CCC; font-size: 1.2rem; cursor: pointer; padding: 5px; }
+        .btn-add { width: 100%; padding: 10px; border: 1px dashed #CCC; color: #888; background: transparent; border-radius: 8px; cursor: pointer; margin-top: 5px; font-size: 0.9rem; }
+        .btn-save { display: block; width: 100%; padding: 15px; background-color: var(--accent-color); color: white; border: none; border-radius: 12px; font-size: 1rem; font-weight: bold; cursor: pointer; margin-top: 20px; }
+        .memo-input { width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 1rem; background: #FFF; margin-bottom: 15px; min-height: 80px; resize: vertical; }
+        .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-weight: bold; color: var(--text-main); }
+        .analysis-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px dashed #EEE; }
+        .analysis-label { font-size: 0.95rem; font-weight: 500; color: #555; }
+        .analysis-val { font-weight: bold; font-size: 1rem; }
 
         .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; height: 60px; background: #FFF; display: flex; justify-content: space-around; align-items: center; border-top: 1px solid #EEE; z-index: 100; }
         .nav-item { flex: 1; text-align: center; color: #C0C0C0; cursor: pointer; display: flex; flex-direction: column; justify-content: center; height: 100%; }
@@ -153,7 +144,6 @@
             <span style="font-size: 0.9rem; color: var(--accent-color);">📅 記帳月份：</span>
             <input type="month" id="input-date-picker" class="date-input" onchange="loadInputDataByDate(this.value)">
         </div>
-        
         <div style="margin-bottom: 20px;"><textarea id="input-memo" class="memo-input" placeholder="本月重要筆記..."></textarea></div>
         <div id="section-assets"><div id="input-sections-assets"></div></div>
         <button class="btn-save" onclick="saveData()">儲存紀錄</button>
@@ -164,45 +154,26 @@
         <div class="header">財務趨勢分析</div>
         
         <div class="card">
-            <div class="section-title">🏆 淨資產目標追蹤</div>
-            <div class="goal-input-container">
-                設定目標：<input type="number" id="net-worth-goal" class="goal-input" placeholder="例如 5000000" onchange="saveGoal()">
+            <div class="section-title">📈 歷史趨勢比較 (可多選)</div>
+            <div class="chart-controls">
+                <div class="chart-toggle active" data-type="net" onclick="toggleDataset('net', this)">淨資產</div>
+                <div class="chart-toggle" data-type="debt" onclick="toggleDataset('debt', this)">負債總額</div>
+                <div class="chart-toggle" data-type="cash" onclick="toggleDataset('cash', this)">現金</div>
+                <div class="chart-toggle" data-type="invest" onclick="toggleDataset('invest', this)">投資</div>
+                <div class="chart-toggle" data-type="card" onclick="toggleDataset('card', this)">信用卡費</div>
+                <div class="chart-toggle" data-type="house" onclick="toggleDataset('house', this)">房貸</div>
             </div>
-            <div class="chart-container" id="net-worth-chart"></div>
+            <div class="chart-box">
+                <canvas id="multiLineChart"></canvas>
+            </div>
+            <div style="font-size:0.8rem; color:#999; text-align:center; margin-top:10px;">💡 點擊上方按鈕可同時顯示多條曲線</div>
         </div>
 
         <div class="card">
             <div class="section-title">🔥 退休計畫 (大盤 ETF)</div>
             <div style="font-size:0.85rem; color:#666; margin-bottom:10px;">追蹤標的：VOO, QQQ, SPY, 0050, 大盤</div>
-            <div class="chart-container" id="retirement-chart"></div>
-        </div>
-
-        <div class="card">
-            <div class="section-title">⚖️ 歷史比較工具</div>
-            <div class="compare-tools">
-                <div class="compare-row">
-                    <span>基準月 A</span>
-                    <select id="compare-month-a" class="compare-select" onchange="updateComparison()"></select>
-                </div>
-                <div class="compare-row">
-                    <span>比較月 B</span>
-                    <select id="compare-month-b" class="compare-select" onchange="updateComparison()"></select>
-                </div>
-                <div class="compare-row">
-                    <span>比較項目</span>
-                    <select id="compare-category" class="compare-select" onchange="updateComparison()">
-                        <option value="debt">💸 負債總額</option>
-                        <option value="card">💳 信用卡費</option>
-                        <option value="loan">🏠 房貸/信貸</option>
-                        <option value="net">💰 淨資產</option>
-                        <option value="cash">💵 現金部位</option>
-                    </select>
-                </div>
-            </div>
-            <div class="compare-result">
-                <div style="font-size:0.8rem; color:#888;">差異 (B - A)</div>
-                <div class="compare-val" id="compare-val">0</div>
-                <div class="compare-diff" id="compare-diff">--</div>
+            <div class="chart-box" style="height:220px;">
+                <canvas id="retirementChartJs"></canvas>
             </div>
         </div>
         
@@ -216,11 +187,13 @@
     </div>
 
     <script>
-        // --- V20 核心 ---
+        // --- V21 核心變數 ---
         let dataStore = {}; 
-        let userGoal = 0; // 使用者目標
+        let myChart = null; // 全能圖表實例
+        let retireChart = null; // 退休圖表實例
+        let userGoal = 0; 
 
-        // 預設樣板
+        // 預設資料
         const defaultTemplate = {
             cash: [{name: "國泰世華", val: 0}, {name: "台新 Richart", val: 0}, {name: "現金錢包", val: 0}],
             invest: [{name: "VOO (美股大盤)", val: 0, price:0, shares:0, exrate:32.5}, {name: "0050 (台股大盤)", val: 0, price:0, shares:0, exrate:1}],
@@ -229,17 +202,14 @@
             memo: ""
         };
 
+        let currentEditingDate = "";
+        let currentEditingData = null;
+
         window.onload = function() {
-            // 載入資料
             let stored = localStorage.getItem('myAssetData_v9_db');
             if (stored) dataStore = JSON.parse(stored);
             else migrateOrInitData();
 
-            // 載入目標
-            let goal = localStorage.getItem('myAssetGoal');
-            if(goal) { userGoal = Number(goal); document.getElementById('net-worth-goal').value = userGoal; }
-
-            // 預設日期
             let today = new Date().toISOString().substring(0, 7);
             let targetDate = today;
             let dates = Object.keys(dataStore).sort();
@@ -248,181 +218,158 @@
             document.getElementById('home-date-picker').value = targetDate;
             document.getElementById('input-date-picker').value = targetDate;
             
-            // 渲染
             loadHomeDataByDate(targetDate);
             loadInputDataByDate(targetDate);
-            initComparison(); // 初始化比較工具
-            renderCharts();   // 畫圖
+            // 延遲一點初始化圖表，確保 DOM 準備好
+            setTimeout(() => {
+                initHistoryChart();
+                initRetireChart();
+            }, 100);
         };
 
-        // --- 資料處理區 ---
+        // --- 核心資料處理 ---
         function getTodayStr() { return new Date().toISOString().substring(0, 7); }
         function migrateOrInitData() {
-            // 假資料讓你可以測試
+            // 建立假資料供測試
             dataStore["2025-11"] = JSON.parse(JSON.stringify(defaultTemplate));
-            dataStore["2025-11"].debt[1].val = 12000000; // 房貸
+            dataStore["2025-11"].debt[0].val = 20000;
+            dataStore["2025-11"].cash[0].val = 100000;
+            
+            dataStore["2025-12"] = JSON.parse(JSON.stringify(defaultTemplate));
+            dataStore["2025-12"].debt[0].val = 50000; // 假裝卡費變多
+            dataStore["2025-12"].cash[0].val = 150000;
+
             dataStore["2026-01"] = JSON.parse(JSON.stringify(defaultTemplate)); 
-            dataStore["2026-01"].debt[1].val = 11800000;
+            dataStore["2026-01"].debt[0].val = 10000; // 卡費還了
+            dataStore["2026-01"].cash[0].val = 80000; // 現金變少
+
             localStorage.setItem('myAssetData_v9_db', JSON.stringify(dataStore));
         }
+
+        // --- V21: 全能圖表邏輯 (Chart.js) ---
+        function initHistoryChart() {
+            const ctx = document.getElementById('multiLineChart').getContext('2d');
+            
+            // 準備數據
+            let dates = Object.keys(dataStore).sort();
+            // 為了不讓圖表太擠，最多顯示最近 12 個月，如果想看全部可以拿掉 slice
+            // let displayDates = dates.slice(-12); 
+            let displayDates = dates; 
+
+            // 預先計算各類別數據陣列
+            let dataNet = [], dataDebt = [], dataCash = [], dataInvest = [], dataCard = [], dataHouse = [];
+
+            displayDates.forEach(d => {
+                let data = dataStore[d];
+                dataNet.push((getSum(data.cash)+getSum(data.invest)+getSum(data.prop)) - getSum(data.debt));
+                dataDebt.push(getSum(data.debt));
+                dataCash.push(getSum(data.cash));
+                dataInvest.push(getSum(data.invest));
+                // 特殊篩選
+                dataCard.push(data.debt.filter(i => i.name.includes("信用卡") || i.name.includes("卡費")).reduce((a,b)=>a+b.val,0));
+                dataHouse.push(data.debt.filter(i => i.name.includes("房貸") || i.name.includes("信貸")).reduce((a,b)=>a+b.val,0));
+            });
+
+            myChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: displayDates.map(d => d.substring(5) + "月"), // 只顯示月份
+                    datasets: [
+                        { label: '淨資產', data: dataNet, borderColor: '#7D8668', backgroundColor: '#7D8668', hidden: false, tension: 0.3 },
+                        { label: '負債總額', data: dataDebt, borderColor: '#B85C5C', backgroundColor: '#B85C5C', hidden: true, tension: 0.3 },
+                        { label: '現金', data: dataCash, borderColor: '#4A90E2', backgroundColor: '#4A90E2', hidden: true, tension: 0.3 },
+                        { label: '投資', data: dataInvest, borderColor: '#F5A623', backgroundColor: '#F5A623', hidden: true, tension: 0.3 },
+                        { label: '信用卡費', data: dataCard, borderColor: '#9013FE', backgroundColor: '#9013FE', hidden: true, tension: 0.3 },
+                        { label: '房貸', data: dataHouse, borderColor: '#50E3C2', backgroundColor: '#50E3C2', hidden: true, tension: 0.3 }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }, // 我們自己做了按鈕，隱藏預設圖例
+                        tooltip: { mode: 'index', intersect: false }
+                    },
+                    scales: {
+                        y: { beginAtZero: false } // 讓波動看起來明顯一點
+                    }
+                }
+            });
+        }
+
+        function toggleDataset(type, btn) {
+            // 切換按鈕樣式
+            btn.classList.toggle('active');
+            
+            // 對應 dataset index
+            const map = { 'net':0, 'debt':1, 'cash':2, 'invest':3, 'card':4, 'house':5 };
+            const idx = map[type];
+            
+            // 切換圖表顯示
+            if (myChart) {
+                let isHidden = myChart.getDatasetMeta(idx).hidden;
+                // Chart.js 的 hidden 邏輯: null/false = 顯示, true = 隱藏
+                // 初始狀態我們設 hidden: true (除了淨資產)
+                // 如果目前是 null 或 false (顯示中)，就要改成 true (隱藏)
+                // 但這裡我們用 classList 'active' 來判斷使用者的意圖
+                
+                if (btn.classList.contains('active')) {
+                    myChart.show(idx);
+                } else {
+                    myChart.hide(idx);
+                }
+            }
+        }
+
+        // --- V21: 退休計畫圖 (Bar Chart) ---
+        function initRetireChart() {
+            const ctx = document.getElementById('retirementChartJs').getContext('2d');
+            let dates = Object.keys(dataStore).sort();
+            let displayDates = dates.slice(-6); // 只看最近6個月
+            
+            let dataRetire = displayDates.map(d => {
+                let invest = dataStore[d].invest;
+                let keywords = ["VOO", "QQQ", "SPY", "0050", "大盤"];
+                return invest.filter(item => keywords.some(k => item.name.toUpperCase().includes(k))).reduce((a, b) => a + b.val, 0);
+            });
+
+            retireChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: displayDates.map(d => d.substring(5) + "月"),
+                    datasets: [{
+                        label: '大盤 ETF 累積',
+                        data: dataRetire,
+                        backgroundColor: '#7D8668',
+                        borderRadius: 5
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true } }
+                }
+            });
+        }
+
+        // --- 其他功能 (沿用) ---
         function saveData() {
             currentEditingData.memo = document.getElementById('input-memo').value;
             dataStore[currentEditingDate] = currentEditingData;
             localStorage.setItem('myAssetData_v9_db', JSON.stringify(dataStore));
             alert(`已儲存！`);
             loadHomeDataByDate(currentEditingDate);
-            renderCharts();
-            initComparison(); // 更新下拉選單
+            
+            // 儲存後重畫圖表
+            myChart.destroy();
+            retireChart.destroy();
+            initHistoryChart();
+            initRetireChart();
+            
             switchPage('home');
         }
-        function saveGoal() {
-            userGoal = Number(document.getElementById('net-worth-goal').value);
-            localStorage.setItem('myAssetGoal', userGoal);
-            renderCharts(); // 重畫圖表以顯示目標線
-        }
 
-        // --- V20 新增：比較工具邏輯 ---
-        function initComparison() {
-            let dates = Object.keys(dataStore).sort().reverse(); // 新到舊
-            let selA = document.getElementById('compare-month-a');
-            let selB = document.getElementById('compare-month-b');
-            selA.innerHTML = ''; selB.innerHTML = '';
-            
-            dates.forEach(d => {
-                let optA = new Option(d, d);
-                let optB = new Option(d, d);
-                selA.add(optA);
-                selB.add(optB);
-            });
-            
-            // 預設選最近兩個月
-            if(dates.length >= 2) {
-                selA.value = dates[1]; // 舊
-                selB.value = dates[0]; // 新
-            }
-            updateComparison();
-        }
-
-        function updateComparison() {
-            let dateA = document.getElementById('compare-month-a').value;
-            let dateB = document.getElementById('compare-month-b').value;
-            let cat = document.getElementById('compare-category').value;
-            
-            if(!dateA || !dateB || !dataStore[dateA] || !dataStore[dateB]) return;
-
-            let valA = getCategoryValue(dataStore[dateA], cat);
-            let valB = getCategoryValue(dataStore[dateB], cat);
-            let diff = valB - valA;
-            let percent = valA !== 0 ? ((diff / Math.abs(valA)) * 100).toFixed(1) : 0;
-
-            let color = diff > 0 ? "var(--danger-color)" : "var(--accent-color)"; // 預設紅是增加(不好)，綠是減少
-            // 如果是淨資產或現金，邏輯相反
-            if(cat === 'net' || cat === 'cash') {
-                color = diff >= 0 ? "var(--accent-color)" : "var(--danger-color)";
-            }
-
-            document.getElementById('compare-val').innerText = (diff>=0?'+':'') + diff.toLocaleString();
-            document.getElementById('compare-val').style.color = color;
-            document.getElementById('compare-diff').innerText = `${percent}%`;
-        }
-
-        function getCategoryValue(data, cat) {
-            if(cat === 'debt') return getSum(data.debt);
-            if(cat === 'net') return (getSum(data.cash)+getSum(data.invest)+getSum(data.prop)) - getSum(data.debt);
-            if(cat === 'cash') return getSum(data.cash);
-            if(cat === 'card') {
-                // 模糊搜尋名稱含"信用卡"或"卡費"
-                return data.debt.filter(i => i.name.includes("信用卡") || i.name.includes("卡費")).reduce((a,b)=>a+b.val,0);
-            }
-            if(cat === 'loan') {
-                return data.debt.filter(i => i.name.includes("貸")).reduce((a,b)=>a+b.val,0);
-            }
-            return 0;
-        }
-
-        // --- V20 新增：圖表繪製 (含目標線 & 退休ETF) ---
-        function renderCharts() {
-            let dates = Object.keys(dataStore).sort();
-            if (dates.length === 0) return;
-            let showData = dates.slice(-5); // 取最後5筆
-
-            // 1. 淨資產圖 (含目標線)
-            drawCustomBarChart('net-worth-chart', showData, (d) => {
-                return (getSum(dataStore[d].cash) + getSum(dataStore[d].invest) + getSum(dataStore[d].prop)) - getSum(dataStore[d].debt);
-            }, userGoal);
-
-            // 2. 退休計畫圖 (只抓特定關鍵字)
-            drawCustomBarChart('retirement-chart', showData, (d) => {
-                return getRetirementSum(dataStore[d].invest);
-            }, 0); // 這裡暫時不設目標線，或你可以再加一個輸入框
-        }
-
-        function getRetirementSum(investList) {
-            // 關鍵字白名單
-            let keywords = ["VOO", "QQQ", "SPY", "0050", "大盤"];
-            return investList.filter(item => {
-                return keywords.some(k => item.name.toUpperCase().includes(k));
-            }).reduce((a, b) => a + b.val, 0);
-        }
-
-        function drawCustomBarChart(containerId, dates, valueFn, goalValue) {
-            const container = document.getElementById(containerId);
-            container.innerHTML = '';
-            
-            let values = dates.map(d => valueFn(d));
-            // 決定 Y 軸最大值：要包含數據最大值，也要包含目標值
-            let maxVal = Math.max(...values);
-            if(goalValue > 0) maxVal = Math.max(maxVal, goalValue);
-            if(maxVal === 0) maxVal = 100; // 避免分母為0
-
-            // 繪製目標線 (如果有的話)
-            if(goalValue > 0) {
-                let goalH = (goalValue / maxVal) * 80; // 留 20% 頭部空間
-                let goalLine = document.createElement('div');
-                goalLine.className = 'goal-line';
-                goalLine.style.bottom = goalH + '%';
-                goalLine.innerHTML = `<div class="goal-label">目標 $${(goalValue/10000).toFixed(0)}萬</div>`;
-                container.appendChild(goalLine);
-            }
-
-            // 繪製 0 線 (基準線)
-            let zeroLine = document.createElement('div');
-            zeroLine.className = 'zero-line';
-            // 簡單處理：如果都是正數，0線在底部；如果有負數，要計算位置。這裡簡化假設資產多為正。
-            let minVal = Math.min(...values);
-            let baseline = 0;
-            if (minVal < 0) {
-                // 如果有負值，需要調整 0 線位置
-                // 這裡為了保持 V20 簡潔，暫時以絕對底部為 0 (適合資產)，若有負債圖可能需調整
-                // 但因為是畫淨資產，通常希望是正的。若為負，Bar 會往下長 (CSS 需配合)
-                // 為了不讓程式碼太複雜，我們採用 "正值往上，負值不顯示或顯示極小" 的簡易顯示，
-                // 或者可以把 minVal 納入 range 計算。
-            }
-            container.appendChild(zeroLine); // 預設底部
-
-            dates.forEach((d, i) => {
-                let val = values[i];
-                let h = (val / maxVal) * 80; // 高度比例
-                if(h < 1 && val > 0) h = 1;
-                
-                let wrapper = document.createElement('div');
-                wrapper.className = 'bar-wrapper';
-                
-                let barClass = val >= 0 ? 'positive' : 'negative';
-                let barHtml = `<div class="bar ${barClass}" style="height:${Math.abs(h)}%;"></div>`;
-                let textHtml = `<div class="bar-val-text" style="bottom:${Math.abs(h)+2}%">${(val/10000).toFixed(0)}萬</div>`;
-                
-                wrapper.innerHTML = `
-                    <div class="bar-container">
-                        ${barHtml} ${textHtml}
-                    </div>
-                    <div class="bar-label">${d.substring(5)}月</div>
-                `;
-                container.appendChild(wrapper);
-            });
-        }
-
-        // --- 其他通用功能 (沿用 V19) ---
         function loadInputDataByDate(date) {
             currentEditingDate = date;
             if (dataStore[date]) currentEditingData = JSON.parse(JSON.stringify(dataStore[date]));
@@ -431,7 +378,6 @@
                 if(dates.length > 0) currentEditingData = JSON.parse(JSON.stringify(dataStore[dates[dates.length-1]]));
                 else currentEditingData = JSON.parse(JSON.stringify(defaultTemplate));
             }
-            // 補全欄位
             if(currentEditingData.invest) {
                 currentEditingData.invest.forEach(i => {
                     if(i.price===undefined) i.price=0; if(i.shares===undefined) i.shares=0; if(i.exrate===undefined) i.exrate=1;
@@ -446,7 +392,6 @@
             ['cash', 'invest', 'prop', 'debt'].forEach(type => {
                 let title = type==='cash'?'💰 現金':(type==='invest'?'📈 投資':(type==='prop'?'🏠 不動產':'💸 負債'));
                 let html = `<div class="card"><div class="section-header">${title} <span id="total-${type}-edit" style="font-size:0.9rem; color:#888;">$0</span></div><div id="list-${type}">`;
-                
                 if(type === 'invest') {
                     currentEditingData[type].forEach((item, index) => html += buildStockRowHtml(index, item));
                 } else {
@@ -464,7 +409,6 @@
         function buildStockRowHtml(index, item) {
             return `<div class="stock-row"><div class="stock-name-row"><input type="text" class="stock-name-input" value="${item.name}" onchange="updateStockData(${index}, 'name', this.value)"><button class="btn-search" onclick="searchStockPrice(${index})">🔍 查價</button><div class="btn-del" onclick="delRow('invest', ${index})">×</div></div><div class="stock-calc-row"><div class="calc-group"><label class="calc-label">股價</label><input type="number" class="calc-input" value="${item.price||''}" placeholder="0" onchange="updateStockData(${index}, 'price', this.value)"></div><div style="color:#CCC;">×</div><div class="calc-group"><label class="calc-label">股數</label><input type="number" class="calc-input" value="${item.shares||''}" placeholder="0" onchange="updateStockData(${index}, 'shares', this.value)"></div><div style="color:#CCC;">×</div><div class="calc-group"><label class="calc-label">匯率</label><input type="number" class="calc-input" value="${item.exrate||1}" placeholder="1" onchange="updateStockData(${index}, 'exrate', this.value)"></div></div><div class="stock-total-row"><span style="font-size:0.8rem;color:var(--accent-color);font-weight:bold;">= 市值</span><span style="font-weight:bold;">$${item.val.toLocaleString()}</span></div></div>`;
         }
-        
         function searchStockPrice(index) {
             let item = currentEditingData.invest[index];
             let stockName = item.name.replace(/\(.*\)/, '');
@@ -476,34 +420,25 @@
         function delRow(type, index) { if(confirm("刪除？")) { currentEditingData[type].splice(index, 1); renderAssetsInput(); } }
         function updateEditTotals() { ['cash', 'invest', 'prop', 'debt'].forEach(type => { let sum = currentEditingData[type].reduce((a, b) => a + b.val, 0); document.getElementById('total-' + type + '-edit').innerText = '$' + sum.toLocaleString(); }); }
         function getSum(arr) { return arr ? arr.reduce((a, b) => a + b.val, 0) : 0; }
-        
-        // 切換頁面
         function switchPage(page) {
             document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
             document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
             document.getElementById('page-' + page).classList.add('active');
             if(page==='home') document.querySelectorAll('.nav-item')[0].classList.add('active');
             if(page==='input') document.querySelectorAll('.nav-item')[1].classList.add('active');
-            if(page==='trend') { 
-                document.querySelectorAll('.nav-item')[2].classList.add('active');
-                renderCharts(); // 確保切換到分析頁時重繪圖表
-                initComparison();
-            }
+            if(page==='trend') document.querySelectorAll('.nav-item')[2].classList.add('active');
         }
-
-        // 首頁資料讀取
         function loadHomeDataByDate(date) {
             let data = dataStore[date];
             if (!data) {
                 document.getElementById('dash-net-worth').innerText = "無資料";
-                document.getElementById('dash-diff').innerText = "請選擇其他月份或去記帳";
+                document.getElementById('dash-diff').innerText = "請選擇其他月份";
                 document.getElementById('analysis-container').innerHTML = "<div style='text-align:center;color:#999;padding:10px;'>📭 本月尚未記帳</div>";
                 document.getElementById('cards-container').innerHTML = "";
                 return;
             }
             let netWorth = (getSum(data.cash) + getSum(data.invest) + getSum(data.prop)) - getSum(data.debt);
             document.getElementById('dash-net-worth').innerText = 'NT$ ' + netWorth.toLocaleString();
-            
             let dates = Object.keys(dataStore).sort();
             let currIdx = dates.indexOf(date);
             let diff = 0;
@@ -517,7 +452,7 @@
                 document.getElementById('dash-diff').style.color = color;
             } else { document.getElementById('dash-diff').innerText = "初始紀錄"; }
 
-            // 自動分析
+            // 自動分析 HTML 生成
             let diffCash = 0, diffInvest = 0, diffDebt = 0;
             if (currIdx > 0) {
                 let prevData = dataStore[dates[currIdx - 1]];
@@ -525,7 +460,6 @@
                 diffInvest = getSum(data.invest) - getSum(prevData.invest);
                 diffDebt = getSum(data.debt) - getSum(prevData.debt);
             }
-            
             document.getElementById('analysis-container').innerHTML = `
                 <div class="analysis-row"><span class="analysis-label">💰 現金變動</span><span class="analysis-val" style="color:${diffCash>=0?'var(--accent-color)':'var(--danger-color)'}">${diffCash>=0?'+':''}${diffCash.toLocaleString()}</span></div>
                 <div class="analysis-row"><span class="analysis-label">📈 投資損益</span><span class="analysis-val" style="color:${diffInvest>=0?'var(--accent-color)':'var(--danger-color)'}">${diffInvest>=0?'+':''}${diffInvest.toLocaleString()}</span></div>
@@ -548,7 +482,7 @@
         }
         function setMode(show) { document.getElementById('detailToggle').checked = show; toggleDetails(); }
         function toggleDetails() { let show = document.getElementById('detailToggle').checked; document.querySelectorAll('.card-category').forEach(c => show ? c.classList.add('show-details') : c.classList.remove('show-details')); }
-        function exportHistoryExcel() { /* 同V19, 省略重複 */ alert("請使用備份功能確保資料安全"); }
+        function exportHistoryExcel() { /* 同V17 */ alert("建議使用備份功能確保資料"); }
         function exportData() { let dataStr = JSON.stringify(dataStore); let blob = new Blob([dataStr], {type: "application/json"}); let url = URL.createObjectURL(blob); let a = document.createElement('a'); a.href = url; a.download = "money_backup_" + getTodayStr() + ".json"; a.click(); }
         function importData(input) { let file = input.files[0]; if(!file) return; let reader = new FileReader(); reader.onload = function(e) { try { if(confirm("確定匯入？")) { dataStore = JSON.parse(e.target.result); localStorage.setItem('myAssetData_v9_db', JSON.stringify(dataStore)); alert("匯入成功！"); location.reload(); } } catch(err) { alert("格式錯誤"); } }; reader.readAsText(file); }
     </script>
