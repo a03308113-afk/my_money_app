@@ -3,10 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>我的資產表 (V21 趨勢戰情)</title>
+    <title>我的資產表 (V21 資產配置)</title>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
     <style>
         /* --- 風格設定 --- */
         :root {
@@ -14,10 +13,16 @@
             --card-bg: #FFFFFF;
             --text-main: #4A4A4A;
             --text-sub: #9B9B9B;
-            --accent-color: #7D8668;   /* 抹茶綠 */
-            --danger-color: #B85C5C;   /* 豆沙紅 */
-            --link-blue: #4A90E2;
-            --btn-gray: #E0E0E0;
+            --accent-color: #7D8668;
+            --danger-color: #B85C5C;
+            --info-bg: #E3E8E3;
+            --border-color: #E0E0E0;
+            --calc-bg: #F0F4F0;
+            /* 圖表顏色 */
+            --c-retire: #E8AF20; /* 退休金 (金) */
+            --c-cash: #4A90E2;   /* 現金 (藍) */
+            --c-stock: #7D8668;  /* 股票 (綠) */
+            --c-prop: #9C27B0;   /* 房產 (紫) */
         }
 
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: var(--bg-color); color: var(--text-main); margin: 0; padding: 0; padding-bottom: 120px; }
@@ -26,32 +31,30 @@
         @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 
         .header { text-align: center; font-weight: bold; font-size: 1.1rem; margin-bottom: 15px; padding-top: 10px; color: var(--text-main); }
-        .card { background-color: var(--card-bg); padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); margin-bottom: 20px; }
+        .card { background-color: var(--card-bg); padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); margin-bottom: 20px; position: relative; }
 
-        /* ---------------- V21 新增圖表控制區 ---------------- */
-        .chart-controls { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 15px; justify-content: center; }
-        .chart-toggle {
-            padding: 5px 12px; border-radius: 15px; font-size: 0.85rem; cursor: pointer;
-            border: 1px solid transparent; background: var(--btn-gray); color: #666; transition: 0.2s; user-select: none;
-        }
-        /* 各種線條的顏色定義 (Active 狀態) */
-        .chart-toggle.active[data-type="net"] { background: #7D8668; color: white; } /* 淨資產-綠 */
-        .chart-toggle.active[data-type="debt"] { background: #B85C5C; color: white; } /* 負債-紅 */
-        .chart-toggle.active[data-type="cash"] { background: #4A90E2; color: white; } /* 現金-藍 */
-        .chart-toggle.active[data-type="invest"] { background: #F5A623; color: white; } /* 投資-橘 */
-        .chart-toggle.active[data-type="card"] { background: #9013FE; color: white; } /* 信用卡-紫 */
-        .chart-toggle.active[data-type="house"] { background: #50E3C2; color: #333; } /* 房貸-青 */
-
-        .chart-box { position: relative; height: 300px; width: 100%; }
-        /* ---------------------------------------------------- */
-
+        /* 通用 */
         .date-picker-container { background: #FFF; padding: 10px 15px; border-radius: 10px; margin-bottom: 15px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border: 1px solid var(--accent-color); }
         .date-input { border: none; background: transparent; font-size: 1rem; color: var(--text-main); font-family: inherit; font-weight: bold; cursor: pointer; }
-        
+        .section-title { font-size: 1rem; font-weight: bold; margin-bottom: 15px; color: var(--text-main); border-left: 4px solid var(--accent-color); padding-left: 10px; }
         .big-number { font-size: 2.2rem; font-weight: 700; margin: 10px 0; text-align: center; }
         .sub-number { font-size: 0.9rem; text-align: center; margin-bottom: 10px; font-weight: bold; }
-        .section-title { font-size: 1rem; font-weight: bold; margin-bottom: 15px; color: var(--text-main); border-left: 4px solid var(--accent-color); padding-left: 10px; }
 
+        /* 圓餅圖控制區 */
+        .pie-controls { margin-top: 20px; border-top: 1px dashed #EEE; padding-top: 15px; }
+        .filter-group { margin-bottom: 10px; }
+        .filter-header { display: flex; align-items: center; font-weight: bold; margin-bottom: 5px; cursor: pointer; font-size: 0.9rem; }
+        .filter-items { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; padding-left: 20px; }
+        .filter-item { display: flex; align-items: center; font-size: 0.85rem; color: #666; cursor: pointer; }
+        .checkbox-custom { accent-color: var(--accent-color); margin-right: 5px; }
+        
+        /* 標籤顏色 */
+        .tag-retire { color: var(--c-retire); }
+        .tag-cash { color: var(--c-cash); }
+        .tag-stock { color: var(--c-stock); }
+        .tag-prop { color: var(--c-prop); }
+
+        /* 其他 CSS (保留舊有樣式) */
         .toggle-container { display: flex; justify-content: center; align-items: center; margin-bottom: 10px; font-size: 0.9rem; color: var(--text-sub); }
         .switch { position: relative; display: inline-block; width: 40px; height: 20px; margin: 0 10px;}
         .switch input { opacity: 0; width: 0; height: 0; }
@@ -59,43 +62,56 @@
         .slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 2px; bottom: 2px; background-color: white; transition: .4s; border-radius: 50%; }
         input:checked + .slider { background-color: var(--accent-color); }
         input:checked + .slider:before { transform: translateX(20px); }
-
         .card-category .detail-list { display: none; margin-top: 10px; border-top: 1px dashed #EEE; padding-top: 10px; }
         .card-category.show-details .detail-list { display: block !important; }
         .detail-item { display: flex; justify-content: space-between; font-size: 0.85rem; color: #888; margin-bottom: 6px; padding-left: 10px; }
-
         .dynamic-row { display: flex; align-items: center; margin-bottom: 8px; }
         .dynamic-name { flex: 1; padding: 10px; border: 1px solid var(--border-color); border-radius: 8px 0 0 8px; background: #FAFAFA; font-size: 0.95rem; }
         .dynamic-val { width: 110px; padding: 10px; border: 1px solid var(--border-color); border-radius: 0 8px 8px 0; text-align: right; font-size: 1rem; }
-        
-        .stock-row { background-color: var(--calc-bg); border-radius: 10px; padding: 10px; margin-bottom: 12px; border: 1px solid #E0E6E0; }
-        .stock-name-row { display: flex; align-items: center; margin-bottom: 5px; }
-        .stock-name-input { width: 100%; border: none; background: transparent; font-weight: bold; font-size: 0.95rem; color: var(--text-main); border-bottom: 1px dashed #CCC; padding-bottom: 3px; }
-        .btn-search { background: var(--link-blue); color: white; border: none; border-radius: 4px; padding: 4px 8px; font-size: 0.75rem; margin-right: 8px; cursor: pointer; }
-        .stock-calc-row { display: flex; justify-content: space-between; align-items: center; gap: 5px; }
-        .calc-group { display: flex; flex-direction: column; width: 30%; }
-        .calc-input { width: 100%; padding: 5px; border: 1px solid #DDD; border-radius: 6px; text-align: center; }
-        .stock-total-row { display: flex; justify-content: space-between; align-items: center; margin-top: 5px; padding-top: 5px; border-top: 1px solid rgba(0,0,0,0.05); }
-
         .btn-del { margin-left: 8px; color: #CCC; font-size: 1.2rem; cursor: pointer; padding: 5px; }
         .btn-add { width: 100%; padding: 10px; border: 1px dashed #CCC; color: #888; background: transparent; border-radius: 8px; cursor: pointer; margin-top: 5px; font-size: 0.9rem; }
         .btn-save { display: block; width: 100%; padding: 15px; background-color: var(--accent-color); color: white; border: none; border-radius: 12px; font-size: 1rem; font-weight: bold; cursor: pointer; margin-top: 20px; }
         .memo-input { width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 1rem; background: #FFF; margin-bottom: 15px; min-height: 80px; resize: vertical; }
-        .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-weight: bold; color: var(--text-main); }
+        .stock-row { background-color: var(--calc-bg); border-radius: 10px; padding: 10px; margin-bottom: 12px; border: 1px solid #E0E6E0; }
+        .stock-name-row { display: flex; align-items: center; margin-bottom: 5px; }
+        .stock-name-input { width: 100%; border: none; background: transparent; font-weight: bold; font-size: 0.95rem; color: var(--text-main); border-bottom: 1px dashed #CCC; padding-bottom: 3px; }
+        .btn-search { background: var(--search-btn); color: white; border: none; border-radius: 4px; padding: 4px 8px; font-size: 0.75rem; margin-right: 8px; cursor: pointer; }
+        .stock-calc-row { display: flex; justify-content: space-between; align-items: center; gap: 5px; }
+        .calc-group { display: flex; flex-direction: column; width: 30%; }
+        .calc-input { width: 100%; padding: 5px; border: 1px solid #DDD; border-radius: 6px; text-align: center; }
+        .stock-total-row { display: flex; justify-content: space-between; align-items: center; margin-top: 5px; padding-top: 5px; border-top: 1px solid rgba(0,0,0,0.05); }
+        .chart-container { display: flex; align-items: flex-end; justify-content: space-between; height: 220px; padding-top: 30px; border-bottom: 1px solid #EEE; position: relative; margin-bottom: 20px;}
+        .zero-line { position: absolute; left: 0; right: 0; top: 0; border-top: 1px dashed #CCC; z-index: 0; }
+        .goal-line { position: absolute; left: 0; right: 0; border-top: 2px dashed #E8AF20; z-index: 2; display: flex; align-items: center; }
+        .goal-label { position: absolute; right: 0; top: -20px; background: #E8AF20; color: white; font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; }
+        .bar-wrapper { width: 15%; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; position: relative; z-index: 1; }
+        .bar-container { height: 100%; width: 100%; display: flex; align-items: flex-end; position: relative; }
+        .bar { width: 100%; transition: height 0.5s ease; opacity: 0.9; position: relative; }
+        .bar.positive { background: var(--accent-color); border-radius: 4px 4px 0 0; }
+        .bar.negative { background: var(--danger-color); border-radius: 0 0 4px 4px; }
+        .bar-label { position: absolute; bottom: -25px; font-size: 0.75rem; color: #999; width: 100%; text-align: center; }
+        .bar-val-text { position: absolute; font-size: 0.6rem; font-weight: bold; width: 140%; left: -20%; text-align: center; color: #666; }
         .analysis-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px dashed #EEE; }
-        .analysis-label { font-size: 0.95rem; font-weight: 500; color: #555; }
-        .analysis-val { font-weight: bold; font-size: 1rem; }
-
+        .trend-icon { margin-right: 8px; }
+        .tab-switch { display: flex; margin-bottom: 20px; background: #E0E0E0; border-radius: 10px; padding: 4px; }
+        .tab-btn { flex: 1; padding: 10px; text-align: center; border-radius: 8px; cursor: pointer; font-weight: bold; color: #888; transition: 0.3s; }
+        .tab-btn.active { background: #FFF; color: var(--text-main); box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
         .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; height: 60px; background: #FFF; display: flex; justify-content: space-around; align-items: center; border-top: 1px solid #EEE; z-index: 100; }
         .nav-item { flex: 1; text-align: center; color: #C0C0C0; cursor: pointer; display: flex; flex-direction: column; justify-content: center; height: 100%; }
         .nav-item.active { color: var(--accent-color); }
         .nav-icon { font-size: 1.4rem; margin-bottom: 2px; }
-
         .backup-section { text-align: center; margin-top: 30px; border-top: 1px solid #EEE; padding-top: 20px; display: flex; flex-direction: column; gap: 10px; align-items: center; }
         .btn-action { padding: 10px 20px; border-radius: 20px; font-size: 0.9rem; cursor: pointer; border: none; color: white; display: inline-flex; align-items: center; justify-content: center; font-weight: bold; margin: 5px;}
         .btn-excel { background-color: #217346; }
         .btn-backup { background-color: #607D8B; }
         .btn-import { background-color: #FFF; border: 1px solid #607D8B; color: #607D8B; }
+        .goal-input { width: 100px; padding: 5px; margin-left: 5px; border: 1px solid #DDD; border-radius: 5px; text-align: right; }
+        .compare-tools { display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px; }
+        .compare-row { display: flex; justify-content: space-between; align-items: center; gap: 5px; }
+        .compare-select { flex: 1; padding: 8px; border: 1px solid #DDD; border-radius: 8px; background: #FAFAFA; font-size: 0.9rem; }
+        .compare-result { background: #F8F9FA; padding: 15px; border-radius: 10px; text-align: center; border: 1px dashed #CCC; }
+        .compare-val { font-size: 1.5rem; font-weight: bold; margin: 5px 0; }
+        .compare-diff { font-size: 0.9rem; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -154,29 +170,40 @@
         <div class="header">財務趨勢分析</div>
         
         <div class="card">
-            <div class="section-title">📈 歷史趨勢比較 (可多選)</div>
-            <div class="chart-controls">
-                <div class="chart-toggle active" data-type="net" onclick="toggleDataset('net', this)">淨資產</div>
-                <div class="chart-toggle" data-type="debt" onclick="toggleDataset('debt', this)">負債總額</div>
-                <div class="chart-toggle" data-type="cash" onclick="toggleDataset('cash', this)">現金</div>
-                <div class="chart-toggle" data-type="invest" onclick="toggleDataset('invest', this)">投資</div>
-                <div class="chart-toggle" data-type="card" onclick="toggleDataset('card', this)">信用卡費</div>
-                <div class="chart-toggle" data-type="house" onclick="toggleDataset('house', this)">房貸</div>
+            <div class="section-title">🍰 資產配置 (可勾選過濾)</div>
+            <div style="position: relative; height:250px; width:100%;">
+                <canvas id="allocationChart"></canvas>
             </div>
-            <div class="chart-box">
-                <canvas id="multiLineChart"></canvas>
+            <div class="pie-controls" id="pie-controls"></div>
+        </div>
+
+        <div class="card">
+            <div class="section-title">🏆 淨資產目標追蹤</div>
+            <div style="display:flex; justify-content:flex-end; margin-bottom:5px;">
+                目標：<input type="number" id="net-worth-goal" class="goal-input" placeholder="5000000" onchange="saveGoal()">
             </div>
-            <div style="font-size:0.8rem; color:#999; text-align:center; margin-top:10px;">💡 點擊上方按鈕可同時顯示多條曲線</div>
+            <div class="chart-container" id="net-worth-chart"></div>
         </div>
 
         <div class="card">
             <div class="section-title">🔥 退休計畫 (大盤 ETF)</div>
-            <div style="font-size:0.85rem; color:#666; margin-bottom:10px;">追蹤標的：VOO, QQQ, SPY, 0050, 大盤</div>
-            <div class="chart-box" style="height:220px;">
-                <canvas id="retirementChartJs"></canvas>
-            </div>
+            <div class="chart-container" id="retirement-chart"></div>
         </div>
-        
+
+        <div class="card">
+            <div class="section-title">⚖️ 歷史比較工具</div>
+            <div class="compare-tools">
+                <div class="compare-row"><span>基準月 A</span><select id="compare-month-a" class="compare-select" onchange="updateComparison()"></select></div>
+                <div class="compare-row"><span>比較月 B</span><select id="compare-month-b" class="compare-select" onchange="updateComparison()"></select></div>
+                <div class="compare-row">
+                    <span>比較項目</span>
+                    <select id="compare-category" class="compare-select" onchange="updateComparison()">
+                        <option value="debt">💸 負債總額</option><option value="card">💳 信用卡費</option><option value="loan">🏠 房貸/信貸</option><option value="net">💰 淨資產</option><option value="cash">💵 現金部位</option>
+                    </select>
+                </div>
+            </div>
+            <div class="compare-result"><div style="font-size:0.8rem; color:#888;">差異 (B - A)</div><div class="compare-val" id="compare-val">0</div><div class="compare-diff" id="compare-diff">--</div></div>
+        </div>
         <div style="height:50px"></div>
     </div>
 
@@ -187,28 +214,14 @@
     </div>
 
     <script>
-        // --- V21 核心變數 ---
-        let dataStore = {}; 
-        let myChart = null; // 全能圖表實例
-        let retireChart = null; // 退休圖表實例
-        let userGoal = 0; 
-
-        // 預設資料
-        const defaultTemplate = {
-            cash: [{name: "國泰世華", val: 0}, {name: "台新 Richart", val: 0}, {name: "現金錢包", val: 0}],
-            invest: [{name: "VOO (美股大盤)", val: 0, price:0, shares:0, exrate:32.5}, {name: "0050 (台股大盤)", val: 0, price:0, shares:0, exrate:1}],
-            prop: [{name: "自用住宅", val: 0}],
-            debt: [{name: "信用卡費", val: 0}, {name: "房屋貸款", val: 0}],
-            memo: ""
-        };
-
-        let currentEditingDate = "";
-        let currentEditingData = null;
+        let dataStore = {}; let userGoal = 0; let myPieChart = null; // 圓餅圖實例
+        const defaultTemplate = { cash: [{name: "國泰世華", val: 0}, {name: "台新 Richart", val: 0}], invest: [{name: "VOO", val: 0, price:0, shares:0, exrate:32.5}], prop: [{name: "自用住宅", val: 0}], debt: [{name: "信用卡費", val: 0}], memo: "" };
 
         window.onload = function() {
             let stored = localStorage.getItem('myAssetData_v9_db');
-            if (stored) dataStore = JSON.parse(stored);
-            else migrateOrInitData();
+            if (stored) dataStore = JSON.parse(stored); else migrateOrInitData();
+            let goal = localStorage.getItem('myAssetGoal');
+            if(goal) { userGoal = Number(goal); document.getElementById('net-worth-goal').value = userGoal; }
 
             let today = new Date().toISOString().substring(0, 7);
             let targetDate = today;
@@ -217,159 +230,234 @@
 
             document.getElementById('home-date-picker').value = targetDate;
             document.getElementById('input-date-picker').value = targetDate;
-            
             loadHomeDataByDate(targetDate);
             loadInputDataByDate(targetDate);
-            // 延遲一點初始化圖表，確保 DOM 準備好
-            setTimeout(() => {
-                initHistoryChart();
-                initRetireChart();
-            }, 100);
+            initComparison();
+            renderCharts();
         };
 
-        // --- 核心資料處理 ---
-        function getTodayStr() { return new Date().toISOString().substring(0, 7); }
-        function migrateOrInitData() {
-            // 建立假資料供測試
-            dataStore["2025-11"] = JSON.parse(JSON.stringify(defaultTemplate));
-            dataStore["2025-11"].debt[0].val = 20000;
-            dataStore["2025-11"].cash[0].val = 100000;
-            
-            dataStore["2025-12"] = JSON.parse(JSON.stringify(defaultTemplate));
-            dataStore["2025-12"].debt[0].val = 50000; // 假裝卡費變多
-            dataStore["2025-12"].cash[0].val = 150000;
-
-            dataStore["2026-01"] = JSON.parse(JSON.stringify(defaultTemplate)); 
-            dataStore["2026-01"].debt[0].val = 10000; // 卡費還了
-            dataStore["2026-01"].cash[0].val = 80000; // 現金變少
-
-            localStorage.setItem('myAssetData_v9_db', JSON.stringify(dataStore));
-        }
-
-        // --- V21: 全能圖表邏輯 (Chart.js) ---
-        function initHistoryChart() {
-            const ctx = document.getElementById('multiLineChart').getContext('2d');
-            
-            // 準備數據
-            let dates = Object.keys(dataStore).sort();
-            // 為了不讓圖表太擠，最多顯示最近 12 個月，如果想看全部可以拿掉 slice
-            // let displayDates = dates.slice(-12); 
-            let displayDates = dates; 
-
-            // 預先計算各類別數據陣列
-            let dataNet = [], dataDebt = [], dataCash = [], dataInvest = [], dataCard = [], dataHouse = [];
-
-            displayDates.forEach(d => {
-                let data = dataStore[d];
-                dataNet.push((getSum(data.cash)+getSum(data.invest)+getSum(data.prop)) - getSum(data.debt));
-                dataDebt.push(getSum(data.debt));
-                dataCash.push(getSum(data.cash));
-                dataInvest.push(getSum(data.invest));
-                // 特殊篩選
-                dataCard.push(data.debt.filter(i => i.name.includes("信用卡") || i.name.includes("卡費")).reduce((a,b)=>a+b.val,0));
-                dataHouse.push(data.debt.filter(i => i.name.includes("房貸") || i.name.includes("信貸")).reduce((a,b)=>a+b.val,0));
+        // --- V21 圓餅圖與勾選邏輯 ---
+        function updatePieChart() {
+            // 1. 取得當前有勾選的項目
+            let selectedItems = [];
+            document.querySelectorAll('.item-checkbox:checked').forEach(cb => {
+                selectedItems.push({
+                    cat: cb.dataset.cat, // retire, stock, cash, prop
+                    val: Number(cb.dataset.val),
+                    label: cb.dataset.label
+                });
             });
 
-            myChart = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: displayDates.map(d => d.substring(5) + "月"), // 只顯示月份
-                    datasets: [
-                        { label: '淨資產', data: dataNet, borderColor: '#7D8668', backgroundColor: '#7D8668', hidden: false, tension: 0.3 },
-                        { label: '負債總額', data: dataDebt, borderColor: '#B85C5C', backgroundColor: '#B85C5C', hidden: true, tension: 0.3 },
-                        { label: '現金', data: dataCash, borderColor: '#4A90E2', backgroundColor: '#4A90E2', hidden: true, tension: 0.3 },
-                        { label: '投資', data: dataInvest, borderColor: '#F5A623', backgroundColor: '#F5A623', hidden: true, tension: 0.3 },
-                        { label: '信用卡費', data: dataCard, borderColor: '#9013FE', backgroundColor: '#9013FE', hidden: true, tension: 0.3 },
-                        { label: '房貸', data: dataHouse, borderColor: '#50E3C2', backgroundColor: '#50E3C2', hidden: true, tension: 0.3 }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { display: false }, // 我們自己做了按鈕，隱藏預設圖例
-                        tooltip: { mode: 'index', intersect: false }
-                    },
-                    scales: {
-                        y: { beginAtZero: false } // 讓波動看起來明顯一點
-                    }
+            // 2. 依照四大類別加總
+            let categories = {
+                'retire': { label: '退休計畫', val: 0, color: '#E8AF20' },
+                'stock': { label: '其他投資', val: 0, color: '#7D8668' },
+                'cash': { label: '現金', val: 0, color: '#4A90E2' },
+                'prop': { label: '房產', val: 0, color: '#9C27B0' }
+            };
+
+            selectedItems.forEach(item => {
+                if(categories[item.cat]) categories[item.cat].val += item.val;
+            });
+
+            // 3. 準備繪圖資料
+            let labels = [], data = [], colors = [];
+            Object.values(categories).forEach(c => {
+                if(c.val > 0) {
+                    labels.push(c.label);
+                    data.push(c.val);
+                    colors.push(c.color);
                 }
             });
-        }
 
-        function toggleDataset(type, btn) {
-            // 切換按鈕樣式
-            btn.classList.toggle('active');
-            
-            // 對應 dataset index
-            const map = { 'net':0, 'debt':1, 'cash':2, 'invest':3, 'card':4, 'house':5 };
-            const idx = map[type];
-            
-            // 切換圖表顯示
-            if (myChart) {
-                let isHidden = myChart.getDatasetMeta(idx).hidden;
-                // Chart.js 的 hidden 邏輯: null/false = 顯示, true = 隱藏
-                // 初始狀態我們設 hidden: true (除了淨資產)
-                // 如果目前是 null 或 false (顯示中)，就要改成 true (隱藏)
-                // 但這裡我們用 classList 'active' 來判斷使用者的意圖
-                
-                if (btn.classList.contains('active')) {
-                    myChart.show(idx);
-                } else {
-                    myChart.hide(idx);
-                }
-            }
-        }
+            // 4. 繪製圖表
+            const ctx = document.getElementById('allocationChart').getContext('2d');
+            if (myPieChart) myPieChart.destroy(); // 清除舊圖
 
-        // --- V21: 退休計畫圖 (Bar Chart) ---
-        function initRetireChart() {
-            const ctx = document.getElementById('retirementChartJs').getContext('2d');
-            let dates = Object.keys(dataStore).sort();
-            let displayDates = dates.slice(-6); // 只看最近6個月
-            
-            let dataRetire = displayDates.map(d => {
-                let invest = dataStore[d].invest;
-                let keywords = ["VOO", "QQQ", "SPY", "0050", "大盤"];
-                return invest.filter(item => keywords.some(k => item.name.toUpperCase().includes(k))).reduce((a, b) => a + b.val, 0);
-            });
-
-            retireChart = new Chart(ctx, {
-                type: 'bar',
+            myPieChart = new Chart(ctx, {
+                type: 'doughnut',
                 data: {
-                    labels: displayDates.map(d => d.substring(5) + "月"),
+                    labels: labels,
                     datasets: [{
-                        label: '大盤 ETF 累積',
-                        data: dataRetire,
-                        backgroundColor: '#7D8668',
-                        borderRadius: 5
+                        data: data,
+                        backgroundColor: colors,
+                        borderWidth: 1
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
-                    scales: { y: { beginAtZero: true } }
+                    plugins: {
+                        legend: { position: 'bottom' },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.label || '';
+                                    let value = context.raw || 0;
+                                    let total = context.chart._metasets[context.datasetIndex].total;
+                                    let percentage = Math.round((value / total) * 100) + '%';
+                                    return label + ': $' + (value/10000).toFixed(1) + '萬 (' + percentage + ')';
+                                }
+                            }
+                        }
+                    }
                 }
             });
         }
 
-        // --- 其他功能 (沿用) ---
+        function initPieControls(date) {
+            let d = dataStore[date];
+            if(!d) return;
+            const container = document.getElementById('pie-controls');
+            container.innerHTML = '';
+
+            // 定義四大類資料源
+            let groups = {
+                'retire': { label: '🔥 退休計畫', items: [], color: 'tag-retire' },
+                'stock': { label: '📈 其他投資', items: [], color: 'tag-stock' },
+                'cash': { label: '💰 現金', items: [], color: 'tag-cash' },
+                'prop': { label: '🏠 房產', items: [], color: 'tag-prop' }
+            };
+
+            // 分類邏輯
+            let keywords = ["VOO", "QQQ", "SPY", "0050", "大盤"];
+            d.invest.forEach(i => {
+                if(keywords.some(k => i.name.toUpperCase().includes(k))) groups.retire.items.push(i);
+                else groups.stock.items.push(i);
+            });
+            groups.cash.items = d.cash;
+            groups.prop.items = d.prop;
+
+            // 產生 HTML
+            Object.keys(groups).forEach(key => {
+                let g = groups[key];
+                if(g.items.length === 0) return;
+
+                let groupHtml = `
+                    <div class="filter-group">
+                        <div class="filter-header ${g.color}">
+                            <input type="checkbox" class="group-checkbox checkbox-custom" data-group="${key}" checked onchange="toggleGroup('${key}', this.checked)">
+                            ${g.label}
+                        </div>
+                        <div class="filter-items">
+                `;
+                
+                g.items.forEach((item, idx) => {
+                    groupHtml += `
+                        <label class="filter-item">
+                            <input type="checkbox" class="item-checkbox checkbox-custom group-${key}" 
+                                data-cat="${key}" data-val="${item.val}" data-label="${item.name}" checked onchange="updatePieChart()">
+                            ${item.name}
+                        </label>
+                    `;
+                });
+                groupHtml += `</div></div>`;
+                container.innerHTML += groupHtml;
+            });
+            updatePieChart(); // 初始繪製
+        }
+
+        function toggleGroup(groupKey, isChecked) {
+            document.querySelectorAll(`.group-${groupKey}`).forEach(cb => {
+                cb.checked = isChecked;
+            });
+            updatePieChart();
+        }
+
+        // --- 以下為舊有功能 (維持不變) ---
+        function getTodayStr() { return new Date().toISOString().substring(0, 7); }
+        function migrateOrInitData() {
+            dataStore["2026-01"] = JSON.parse(JSON.stringify(defaultTemplate)); 
+            localStorage.setItem('myAssetData_v9_db', JSON.stringify(dataStore));
+        }
         function saveData() {
             currentEditingData.memo = document.getElementById('input-memo').value;
             dataStore[currentEditingDate] = currentEditingData;
             localStorage.setItem('myAssetData_v9_db', JSON.stringify(dataStore));
             alert(`已儲存！`);
             loadHomeDataByDate(currentEditingDate);
-            
-            // 儲存後重畫圖表
-            myChart.destroy();
-            retireChart.destroy();
-            initHistoryChart();
-            initRetireChart();
-            
+            renderCharts();
+            initComparison();
             switchPage('home');
         }
+        function saveGoal() {
+            userGoal = Number(document.getElementById('net-worth-goal').value);
+            localStorage.setItem('myAssetGoal', userGoal);
+            renderCharts();
+        }
+        function initComparison() {
+            let dates = Object.keys(dataStore).sort().reverse();
+            let selA = document.getElementById('compare-month-a');
+            let selB = document.getElementById('compare-month-b');
+            selA.innerHTML = ''; selB.innerHTML = '';
+            dates.forEach(d => { selA.add(new Option(d, d)); selB.add(new Option(d, d)); });
+            if(dates.length >= 2) { selA.value = dates[1]; selB.value = dates[0]; }
+            updateComparison();
+        }
+        function updateComparison() {
+            let dateA = document.getElementById('compare-month-a').value;
+            let dateB = document.getElementById('compare-month-b').value;
+            let cat = document.getElementById('compare-category').value;
+            if(!dateA || !dateB || !dataStore[dateA] || !dataStore[dateB]) return;
+            let valA = getCategoryValue(dataStore[dateA], cat);
+            let valB = getCategoryValue(dataStore[dateB], cat);
+            let diff = valB - valA;
+            let percent = valA !== 0 ? ((diff / Math.abs(valA)) * 100).toFixed(1) : 0;
+            let color = diff > 0 ? "var(--danger-color)" : "var(--accent-color)";
+            if(cat === 'net' || cat === 'cash') color = diff >= 0 ? "var(--accent-color)" : "var(--danger-color)";
+            document.getElementById('compare-val').innerText = (diff>=0?'+':'') + diff.toLocaleString();
+            document.getElementById('compare-val').style.color = color;
+            document.getElementById('compare-diff').innerText = `${percent}%`;
+        }
+        function getCategoryValue(data, cat) {
+            if(cat === 'debt') return getSum(data.debt);
+            if(cat === 'net') return (getSum(data.cash)+getSum(data.invest)+getSum(data.prop)) - getSum(data.debt);
+            if(cat === 'cash') return getSum(data.cash);
+            if(cat === 'card') return data.debt.filter(i => i.name.includes("信用卡") || i.name.includes("卡費")).reduce((a,b)=>a+b.val,0);
+            if(cat === 'loan') return data.debt.filter(i => i.name.includes("貸")).reduce((a,b)=>a+b.val,0);
+            return 0;
+        }
+        function renderCharts() {
+            let dates = Object.keys(dataStore).sort();
+            if (dates.length === 0) return;
+            let showData = dates.slice(-5);
+            let targetDate = document.getElementById('home-date-picker').value || showData[showData.length-1];
+            
+            // 初始化圓餅圖控制項 (使用當前選擇的月份)
+            initPieControls(targetDate);
 
+            drawCustomBarChart('net-worth-chart', showData, (d) => {
+                return (getSum(dataStore[d].cash) + getSum(dataStore[d].invest) + getSum(dataStore[d].prop)) - getSum(dataStore[d].debt);
+            }, userGoal);
+            drawCustomBarChart('retirement-chart', showData, (d) => {
+                return getRetirementSum(dataStore[d].invest);
+            }, 0);
+        }
+        function getRetirementSum(investList) {
+            let keywords = ["VOO", "QQQ", "SPY", "0050", "大盤"];
+            return investList.filter(item => { return keywords.some(k => item.name.toUpperCase().includes(k)); }).reduce((a, b) => a + b.val, 0);
+        }
+        function drawCustomBarChart(containerId, dates, valueFn, goalValue) {
+            const container = document.getElementById(containerId); container.innerHTML = '';
+            let values = dates.map(d => valueFn(d));
+            let maxVal = Math.max(...values); if(goalValue > 0) maxVal = Math.max(maxVal, goalValue); if(maxVal === 0) maxVal = 100;
+            if(goalValue > 0) {
+                let goalH = (goalValue / maxVal) * 80;
+                let goalLine = document.createElement('div'); goalLine.className = 'goal-line'; goalLine.style.bottom = goalH + '%';
+                goalLine.innerHTML = `<div class="goal-label">目標 $${(goalValue/10000).toFixed(0)}萬</div>`;
+                container.appendChild(goalLine);
+            }
+            let zeroLine = document.createElement('div'); zeroLine.className = 'zero-line'; container.appendChild(zeroLine);
+            dates.forEach((d, i) => {
+                let val = values[i]; let h = (val / maxVal) * 80; if(h < 1 && val > 0) h = 1;
+                let wrapper = document.createElement('div'); wrapper.className = 'bar-wrapper';
+                let barClass = val >= 0 ? 'positive' : 'negative';
+                let barHtml = `<div class="bar ${barClass}" style="height:${Math.abs(h)}%;"></div>`;
+                let textHtml = `<div class="bar-val-text" style="bottom:${Math.abs(h)+2}%">${(val/10000).toFixed(0)}萬</div>`;
+                wrapper.innerHTML = `<div class="bar-container">${barHtml} ${textHtml}</div><div class="bar-label">${d.substring(5)}月</div>`;
+                container.appendChild(wrapper);
+            });
+        }
         function loadInputDataByDate(date) {
             currentEditingDate = date;
             if (dataStore[date]) currentEditingData = JSON.parse(JSON.stringify(dataStore[date]));
@@ -378,42 +466,25 @@
                 if(dates.length > 0) currentEditingData = JSON.parse(JSON.stringify(dataStore[dates[dates.length-1]]));
                 else currentEditingData = JSON.parse(JSON.stringify(defaultTemplate));
             }
-            if(currentEditingData.invest) {
-                currentEditingData.invest.forEach(i => {
-                    if(i.price===undefined) i.price=0; if(i.shares===undefined) i.shares=0; if(i.exrate===undefined) i.exrate=1;
-                });
-            }
+            if(currentEditingData.invest) { currentEditingData.invest.forEach(i => { if(i.price===undefined) i.price=0; if(i.shares===undefined) i.shares=0; if(i.exrate===undefined) i.exrate=1; }); }
             document.getElementById('input-memo').value = currentEditingData.memo || "";
             renderAssetsInput();
         }
-
         function renderAssetsInput() {
             const container = document.getElementById('input-sections-assets'); container.innerHTML = '';
             ['cash', 'invest', 'prop', 'debt'].forEach(type => {
                 let title = type==='cash'?'💰 現金':(type==='invest'?'📈 投資':(type==='prop'?'🏠 不動產':'💸 負債'));
                 let html = `<div class="card"><div class="section-header">${title} <span id="total-${type}-edit" style="font-size:0.9rem; color:#888;">$0</span></div><div id="list-${type}">`;
-                if(type === 'invest') {
-                    currentEditingData[type].forEach((item, index) => html += buildStockRowHtml(index, item));
-                } else {
-                    currentEditingData[type].forEach((item, index) => html += buildRowHtml(type, index, item));
-                }
+                if(type === 'invest') currentEditingData[type].forEach((item, index) => html += buildStockRowHtml(index, item));
+                else currentEditingData[type].forEach((item, index) => html += buildRowHtml(type, index, item));
                 html += `</div><button class="btn-add" onclick="addRow('${type}')">+ 新增項目</button></div>`;
                 container.innerHTML += html;
             });
             updateEditTotals();
         }
-
-        function buildRowHtml(type, index, item) {
-            return `<div class="dynamic-row"><input type="text" class="dynamic-name" value="${item.name}" onchange="updateSimpleData('${type}', ${index}, 'name', this.value)"><input type="number" class="dynamic-val" value="${item.val}" placeholder="0" onchange="updateSimpleData('${type}', ${index}, 'val', this.value)"><div class="btn-del" onclick="delRow('${type}', ${index})">×</div></div>`;
-        }
-        function buildStockRowHtml(index, item) {
-            return `<div class="stock-row"><div class="stock-name-row"><input type="text" class="stock-name-input" value="${item.name}" onchange="updateStockData(${index}, 'name', this.value)"><button class="btn-search" onclick="searchStockPrice(${index})">🔍 查價</button><div class="btn-del" onclick="delRow('invest', ${index})">×</div></div><div class="stock-calc-row"><div class="calc-group"><label class="calc-label">股價</label><input type="number" class="calc-input" value="${item.price||''}" placeholder="0" onchange="updateStockData(${index}, 'price', this.value)"></div><div style="color:#CCC;">×</div><div class="calc-group"><label class="calc-label">股數</label><input type="number" class="calc-input" value="${item.shares||''}" placeholder="0" onchange="updateStockData(${index}, 'shares', this.value)"></div><div style="color:#CCC;">×</div><div class="calc-group"><label class="calc-label">匯率</label><input type="number" class="calc-input" value="${item.exrate||1}" placeholder="1" onchange="updateStockData(${index}, 'exrate', this.value)"></div></div><div class="stock-total-row"><span style="font-size:0.8rem;color:var(--accent-color);font-weight:bold;">= 市值</span><span style="font-weight:bold;">$${item.val.toLocaleString()}</span></div></div>`;
-        }
-        function searchStockPrice(index) {
-            let item = currentEditingData.invest[index];
-            let stockName = item.name.replace(/\(.*\)/, '');
-            window.open(`https://www.google.com/search?q=${encodeURIComponent(`${stockName} stock price ${currentEditingDate}`)}`, '_blank');
-        }
+        function buildRowHtml(type, index, item) { return `<div class="dynamic-row"><input type="text" class="dynamic-name" value="${item.name}" onchange="updateSimpleData('${type}', ${index}, 'name', this.value)"><input type="number" class="dynamic-val" value="${item.val}" placeholder="0" onchange="updateSimpleData('${type}', ${index}, 'val', this.value)"><div class="btn-del" onclick="delRow('${type}', ${index})">×</div></div>`; }
+        function buildStockRowHtml(index, item) { return `<div class="stock-row"><div class="stock-name-row"><input type="text" class="stock-name-input" value="${item.name}" onchange="updateStockData(${index}, 'name', this.value)"><button class="btn-search" onclick="searchStockPrice(${index})">🔍 查價</button><div class="btn-del" onclick="delRow('invest', ${index})">×</div></div><div class="stock-calc-row"><div class="calc-group"><label class="calc-label">股價</label><input type="number" class="calc-input" value="${item.price||''}" placeholder="0" onchange="updateStockData(${index}, 'price', this.value)"></div><div style="color:#CCC;">×</div><div class="calc-group"><label class="calc-label">股數</label><input type="number" class="calc-input" value="${item.shares||''}" placeholder="0" onchange="updateStockData(${index}, 'shares', this.value)"></div><div style="color:#CCC;">×</div><div class="calc-group"><label class="calc-label">匯率</label><input type="number" class="calc-input" value="${item.exrate||1}" placeholder="1" onchange="updateStockData(${index}, 'exrate', this.value)"></div></div><div class="stock-total-row"><span style="font-size:0.8rem;color:var(--accent-color);font-weight:bold;">= 市值</span><span style="font-weight:bold;">$${item.val.toLocaleString()}</span></div></div>`; }
+        function searchStockPrice(index) { let item = currentEditingData.invest[index]; let stockName = item.name.replace(/\(.*\)/, ''); window.open(`https://www.google.com/search?q=${encodeURIComponent(`${stockName} stock price ${currentEditingDate}`)}`, '_blank'); }
         function updateSimpleData(type, index, key, val) { if(key === 'val') val = Number(val) || 0; currentEditingData[type][index][key] = val; updateEditTotals(); }
         function updateStockData(index, key, val) { let item = currentEditingData.invest[index]; if(key === 'name') item.name = val; else { item[key] = Number(val) || 0; item.val = Math.round(item.price * item.shares * item.exrate); } renderAssetsInput(); }
         function addRow(type) { if(type === 'invest') currentEditingData[type].push({name: "", val: 0, price: 0, shares: 0, exrate: 1}); else currentEditingData[type].push({name: "", val: 0}); renderAssetsInput(); }
@@ -426,13 +497,17 @@
             document.getElementById('page-' + page).classList.add('active');
             if(page==='home') document.querySelectorAll('.nav-item')[0].classList.add('active');
             if(page==='input') document.querySelectorAll('.nav-item')[1].classList.add('active');
-            if(page==='trend') document.querySelectorAll('.nav-item')[2].classList.add('active');
+            if(page==='trend') { 
+                document.querySelectorAll('.nav-item')[2].classList.add('active');
+                renderCharts(); // 切換頁面時刷新圖表
+                initComparison();
+            }
         }
         function loadHomeDataByDate(date) {
             let data = dataStore[date];
             if (!data) {
                 document.getElementById('dash-net-worth').innerText = "無資料";
-                document.getElementById('dash-diff').innerText = "請選擇其他月份";
+                document.getElementById('dash-diff').innerText = "請選擇其他月份或去記帳";
                 document.getElementById('analysis-container').innerHTML = "<div style='text-align:center;color:#999;padding:10px;'>📭 本月尚未記帳</div>";
                 document.getElementById('cards-container').innerHTML = "";
                 return;
@@ -451,8 +526,6 @@
                 document.getElementById('dash-diff').innerText = `${sign} 較上月 ${diff >= 0 ? '+' : ''}${diff.toLocaleString()}`;
                 document.getElementById('dash-diff').style.color = color;
             } else { document.getElementById('dash-diff').innerText = "初始紀錄"; }
-
-            // 自動分析 HTML 生成
             let diffCash = 0, diffInvest = 0, diffDebt = 0;
             if (currIdx > 0) {
                 let prevData = dataStore[dates[currIdx - 1]];
@@ -465,7 +538,6 @@
                 <div class="analysis-row"><span class="analysis-label">📈 投資損益</span><span class="analysis-val" style="color:${diffInvest>=0?'var(--accent-color)':'var(--danger-color)'}">${diffInvest>=0?'+':''}${diffInvest.toLocaleString()}</span></div>
                 <div class="analysis-row"><span class="analysis-label">💸 負債變動</span><span class="analysis-val" style="color:${diffDebt>0?'var(--danger-color)':'var(--accent-color)'}">${diffDebt>=0?'+':''}${diffDebt.toLocaleString()}</span></div>
             `;
-
             const container = document.getElementById('cards-container');
             container.innerHTML = `
                 ${createCard('💰 現金資產', getSum(data.cash), data.cash, false)}
@@ -482,7 +554,7 @@
         }
         function setMode(show) { document.getElementById('detailToggle').checked = show; toggleDetails(); }
         function toggleDetails() { let show = document.getElementById('detailToggle').checked; document.querySelectorAll('.card-category').forEach(c => show ? c.classList.add('show-details') : c.classList.remove('show-details')); }
-        function exportHistoryExcel() { /* 同V17 */ alert("建議使用備份功能確保資料"); }
+        function exportHistoryExcel() { /*略*/ alert("請使用備份功能"); }
         function exportData() { let dataStr = JSON.stringify(dataStore); let blob = new Blob([dataStr], {type: "application/json"}); let url = URL.createObjectURL(blob); let a = document.createElement('a'); a.href = url; a.download = "money_backup_" + getTodayStr() + ".json"; a.click(); }
         function importData(input) { let file = input.files[0]; if(!file) return; let reader = new FileReader(); reader.onload = function(e) { try { if(confirm("確定匯入？")) { dataStore = JSON.parse(e.target.result); localStorage.setItem('myAssetData_v9_db', JSON.stringify(dataStore)); alert("匯入成功！"); location.reload(); } } catch(err) { alert("格式錯誤"); } }; reader.readAsText(file); }
     </script>
